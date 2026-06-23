@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEFQON.1 // Festival Stats</title>
+<style>
+  :root{
+    --bg:#06040d;
+    --bg2:#0d0820;
+    --panel:#130c28;
+    --panel2:#1b1138;
+    --line:#2a1c52;
+    --magenta:#ff1e6e;
+    --purple:#8b2bff;
+    --cyan:#19e3ff;
+    --lime:#b6ff3c;
+    --amber:#ffb020;
+    --text:#f2ecff;
+    --muted:#9a8fc4;
+    --glow:0 0 22px rgba(255,30,110,.45);
+    --glowc:0 0 22px rgba(25,227,255,.4);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(139,43,255,.22), transparent 60%),
+      radial-gradient(1000px 500px at 0% 0%, rgba(255,30,110,.18), transparent 55%),
+      radial-gradient(900px 700px at 50% 120%, rgba(25,227,255,.12), transparent 60%),
+      var(--bg);
+    padding-bottom:60px;
+  }
+  .wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+
+  /* ---------- HEADER ---------- */
+  header{position:relative;overflow:hidden;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(19,12,40,.7), rgba(6,4,13,.2));}
+  .hgrid{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px;padding:30px 0 26px}
+  .brand{display:flex;flex-direction:column;gap:6px}
+  .kicker{font-size:12px;letter-spacing:5px;color:var(--cyan);text-transform:uppercase;font-weight:700}
+  .logo{font-size:clamp(34px,6vw,62px);font-weight:900;letter-spacing:-1px;line-height:.95;
+    background:linear-gradient(92deg,var(--magenta),var(--purple) 55%,var(--cyan));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 40px rgba(139,43,255,.35);}
+  .logo span{font-weight:300}
+  .subline{color:var(--muted);font-size:14px;letter-spacing:1px}
+  .subline b{color:var(--text)}
+  .countdown{display:flex;gap:12px}
+  .cd{min-width:78px;text-align:center;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:12px 10px;box-shadow:inset 0 0 24px rgba(139,43,255,.12)}
+  .cd .n{font-size:30px;font-weight:900;color:#fff;line-height:1;
+    background:linear-gradient(180deg,#fff,var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .cd .l{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-top:6px}
+  .cd.live .n{background:linear-gradient(180deg,var(--lime),#fff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+
+  /* ---------- TABS ---------- */
+  nav.tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-top:10px}
+  .tab{position:relative;background:none;border:none;color:var(--muted);font-size:14px;font-weight:700;
+    letter-spacing:.5px;padding:14px 18px;cursor:pointer;border-radius:10px 10px 0 0;transition:.15s}
+  .tab:hover{color:var(--text);background:rgba(139,43,255,.08)}
+  .tab.active{color:#fff}
+  .tab.active::after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:3px;border-radius:3px;
+    background:linear-gradient(90deg,var(--magenta),var(--cyan));box-shadow:var(--glow)}
+  .tab .soon{font-size:9px;letter-spacing:1px;background:var(--panel2);border:1px solid var(--line);
+    color:var(--muted);border-radius:20px;padding:2px 7px;margin-left:7px;vertical-align:middle;text-transform:uppercase}
+
+  /* ---------- PANELS ---------- */
+  .panel{display:none;padding-top:30px}
+  .panel.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .sectionhead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:8px}
+  .sectionhead h2{font-size:24px;font-weight:900;letter-spacing:.5px}
+  .sectionhead h2 em{font-style:normal;color:var(--cyan)}
+  .sectionhead p{color:var(--muted);font-size:13px;max-width:560px;margin-top:4px}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--panel);border:1px solid var(--line);color:var(--text);font-weight:700;font-size:13px;
+    padding:10px 16px;border-radius:11px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:8px}
+  .btn:hover{border-color:var(--magenta);box-shadow:var(--glow)}
+  .btn.alt:hover{border-color:var(--cyan);box-shadow:var(--glowc)}
+  .updated{color:var(--muted);font-size:12px}
+
+  /* ---------- DAY CARDS ---------- */
+  .daygrid{display:flex;flex-direction:column;gap:16px;margin-top:22px}
+  .day{position:relative;background:linear-gradient(165deg,var(--panel2),var(--panel));
+    border:1px solid var(--line);border-radius:18px;padding:18px 18px 16px;overflow:hidden;transition:.2s}
+  .day:hover{border-color:var(--purple);box-shadow:0 8px 28px rgba(139,43,255,.16)}
+  /* one card per row: summary on the left, wide hour-by-hour on the right */
+  .day-main{display:flex;gap:24px;align-items:flex-start;margin-top:14px}
+  .day-summary{flex:0 0 290px;max-width:300px}
+  .day-detail{flex:1 1 auto;min-width:0}
+  @media(max-width:780px){ .day-main{flex-direction:column;gap:16px} .day-summary{flex:1 1 auto;max-width:none;width:100%} }
+  .day.travel{border-style:dashed;border-color:#3a2a66;background:linear-gradient(165deg,#160f2e,#0e0a1f)}
+  .day.peak::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,30,110,.10),transparent 40%);pointer-events:none}
+  .dtop{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .dname{font-size:17px;font-weight:900;letter-spacing:.3px}
+  .ddate{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+  .badge{font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:4px 8px;border-radius:20px;white-space:nowrap}
+  .badge.arr{background:rgba(25,227,255,.14);color:var(--cyan);border:1px solid rgba(25,227,255,.4)}
+  .badge.dep{background:rgba(255,176,32,.14);color:var(--amber);border:1px solid rgba(255,176,32,.4)}
+  .badge.fest{background:rgba(255,30,110,.16);color:var(--magenta);border:1px solid rgba(255,30,110,.45)}
+  .icon{font-size:46px;line-height:1;margin:14px 0 6px;filter:drop-shadow(0 0 14px rgba(25,227,255,.35))}
+  .cond{font-size:13px;color:var(--text);font-weight:600;min-height:34px}
+  .temps{display:flex;align-items:baseline;gap:10px;margin:10px 0 4px}
+  .thi{font-size:34px;font-weight:900;line-height:1}
+  .tlo{font-size:16px;color:var(--muted);font-weight:700}
+  .tunit{font-size:14px;color:var(--muted)}
+  .metrics{display:flex;flex-direction:column;gap:7px;margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+  .m{display:flex;align-items:center;justify-content:space-between;font-size:12px}
+  .m .ml{color:var(--muted);display:flex;align-items:center;gap:6px}
+  .m .mv{font-weight:800}
+  .bar{height:5px;border-radius:4px;background:var(--line);overflow:hidden;flex:1;margin:0 8px;max-width:70px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--magenta))}
+  .srcline{margin-top:12px;font-size:10px;color:var(--muted);letter-spacing:.3px}
+  .srcline b{color:var(--lime)}
+  .nodata{margin-top:14px;padding:14px;border:1px dashed var(--line);border-radius:12px;text-align:center}
+  .lowconf{background:rgba(255,176,32,.12);border:1px solid rgba(255,176,32,.4);color:#ffd27a;
+    border-radius:10px;padding:8px 10px;font-size:10px;line-height:1.5;margin-bottom:4px}
+  .nodata .em{font-size:30px}
+  .nodata p{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
+
+  /* per-source breakdown */
+  details.bd{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  details.bd summary{cursor:pointer;font-size:11px;color:var(--cyan);font-weight:700;letter-spacing:.5px;list-style:none}
+  details.bd summary::-webkit-details-marker{display:none}
+  details.bd summary::before{content:"▸ ";color:var(--muted)}
+  details.bd[open] summary::before{content:"▾ "}
+  .srow{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:5px 0;border-bottom:1px dotted var(--line)}
+  .srow:last-child{border:none}
+  .srow .sv{color:var(--text);font-weight:700}
+
+  /* hourly */
+  .hhead{font-size:12px;color:var(--cyan);font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+    padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:4px}
+  .hnote{font-size:11px;color:var(--muted);line-height:1.5;padding:10px 2px}
+  .hsvgwrap{margin-top:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg2);padding:4px}
+  .hsvg{display:block;width:100%;height:96px}
+  .hstrip{display:flex;gap:3px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:thin;scrollbar-color:var(--purple) transparent}
+  .hstrip::-webkit-scrollbar{height:6px}
+  .hstrip::-webkit-scrollbar-thumb{background:var(--purple);border-radius:6px}
+  .hcol{flex:none;width:46px;text-align:center;padding:7px 2px;border-radius:9px;background:var(--bg2);border:1px solid transparent}
+  .hcol.prime{border-color:rgba(255,30,110,.4);background:rgba(255,30,110,.07)}
+  .hcol .hh{font-size:10px;color:var(--muted);font-weight:700}
+  .hcol .he{font-size:17px;margin:2px 0}
+  .hcol .ht{font-size:13px;font-weight:800}
+  .hcol .hp{font-size:9px;color:var(--cyan);font-weight:700;margin-top:2px}
+  .hcol .hw{font-size:9px;color:var(--muted)}
+  .hlegend{font-size:9px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+  .hlegend .pdot{width:8px;height:8px;border-radius:3px;background:rgba(255,30,110,.5);display:inline-block}
+
+  /* model-spread chip */
+  .spread{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.4}
+  .spread b{color:var(--text)}
+  .spread b.agree{color:var(--lime)} .spread b.ok{color:var(--amber)} .spread b.loose{color:#ff8a98}
+
+  /* part-of-day overview */
+  .parts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  .part{background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:10px 9px}
+  .part .plabel{font-size:10px;font-weight:800;letter-spacing:.2px;display:flex;align-items:center;justify-content:space-between;gap:4px}
+  .part .ptime{font-size:8px;color:var(--muted);font-weight:600}
+  .part .pmain{display:flex;align-items:center;gap:7px;margin:5px 0 1px}
+  .part .pemo{font-size:23px;line-height:1}
+  .part .ptemp{font-size:21px;font-weight:900}
+  .part .pcond{font-size:10px;color:var(--muted);min-height:13px}
+  .part .pmeta{font-size:10px;color:var(--cyan);font-weight:700;margin-top:6px}
+  @media(max-width:560px){ .parts{grid-template-columns:repeat(2,1fr)} }
+
+  /* all-hours rows */
+  .subhours{margin-top:10px}
+  .hrows{display:flex;flex-direction:column;gap:3px;margin-top:8px;max-height:320px;overflow-y:auto;
+    scrollbar-width:thin;scrollbar-color:var(--purple) transparent}
+  .hrow{display:grid;grid-template-columns:50px 26px 44px 1fr auto;align-items:center;gap:8px;
+    padding:7px 10px;border-radius:9px;font-size:12px;background:var(--bg2);border:1px solid transparent}
+  .hrow.prime{background:rgba(255,30,110,.07);border-color:rgba(255,30,110,.28)}
+  .hrow .hr-t{color:var(--muted);font-weight:700}
+  .hrow .hr-e{font-size:16px;text-align:center}
+  .hrow .hr-temp{font-weight:800;font-size:13px}
+  .hrow .hr-pop{color:var(--cyan);font-weight:700}
+  .hrow .hr-w{color:var(--muted);justify-self:end}
+
+  /* ---------- HISTORY ---------- */
+  .records{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0 6px}
+  .rec{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);
+    border-radius:14px;padding:14px 14px 13px;position:relative;overflow:hidden}
+  .rec .rl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .rec .rv{font-size:26px;font-weight:900;line-height:1;margin:8px 0 3px;
+    background:linear-gradient(180deg,#fff,var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .rec .ry{font-size:12px;color:var(--magenta);font-weight:800}
+  .rec .re{position:absolute;top:10px;right:12px;font-size:22px;opacity:.9}
+  .rec.hot{border-color:rgba(255,90,40,.5)} .rec.hot .rv{background:linear-gradient(180deg,#ffd27a,#ff5a28);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .rec.wet{border-color:rgba(25,150,255,.5)} .rec.wet .rv{background:linear-gradient(180deg,#bfe6ff,#19a3ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+
+  .histgrid{display:flex;flex-direction:column;gap:20px;margin-top:18px}
+  .edrow{position:relative;background:linear-gradient(165deg,var(--panel),rgba(13,8,32,.35));border:1px solid var(--line);
+    border-radius:18px;padding:16px 16px 18px;overflow:hidden;transition:.2s}
+  .edrow:hover{border-color:var(--purple);box-shadow:0 10px 30px rgba(139,43,255,.14)}
+  .edrow.hot{border-color:rgba(255,90,40,.4)} .edrow.wet{border-color:rgba(30,150,255,.4)}
+  .edhead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px;
+    margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+  .edtitle{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .edtitle .yr{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1;
+    background:linear-gradient(180deg,#fff,var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .edtitle .anthem{font-size:13px;color:var(--cyan);font-style:italic;font-weight:700}
+  .edtitle .dr{font-size:12px;color:var(--muted);letter-spacing:.5px}
+  .edmeta{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .pill{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:700;color:var(--muted)}
+  .pill b{color:var(--text)}
+  .pill.hot{border-color:rgba(255,90,40,.5);color:#ffb37a;background:rgba(255,90,40,.08)}
+  .pill.wet{border-color:rgba(30,150,255,.5);color:#9bd2ff;background:rgba(30,150,255,.08)}
+  .edcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:12px}
+  .hday{background:linear-gradient(165deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:13px 13px 12px;transition:.18s}
+  .hday:hover{transform:translateY(-3px);border-color:var(--cyan)}
+  .hday .icon{font-size:36px;margin:6px 0 4px}
+  .hday .thi{font-size:27px}
+  .histload{text-align:center;color:var(--muted);padding:50px;font-size:14px}
+  .edrow.fail{border-color:rgba(255,90,114,.45);border-style:dashed;background:linear-gradient(165deg,rgba(255,90,114,.06),rgba(13,8,32,.3))}
+  .edrow.fail .edhead{border-bottom:none;margin-bottom:0;padding-bottom:0}
+  .pill.err{border-color:rgba(255,90,114,.5);color:#ff9aa8;background:rgba(255,90,114,.1)}
+  .retrybtn{padding:5px 12px;font-size:12px}
+
+  /* ---------- SOURCES PANEL ---------- */
+  .sources{margin-top:34px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px}
+  .sources h3{font-size:15px;font-weight:900;letter-spacing:.5px;margin-bottom:4px}
+  .sources .sub{color:var(--muted);font-size:12px;margin-bottom:16px}
+  .slist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .scard{background:var(--bg2);border:1px solid var(--line);border-radius:13px;padding:14px}
+  .scard .sh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .scard .nm{font-weight:800;font-size:13px}
+  .scard .rg{font-size:10px;color:var(--cyan);letter-spacing:1px;text-transform:uppercase}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;flex:none}
+  .st{font-size:11px;font-weight:700;display:inline-flex;align-items:center}
+  .st.ok{color:var(--lime)} .st.ok .dot{background:var(--lime);box-shadow:0 0 8px var(--lime)}
+  .st.wait{color:var(--amber)} .st.wait .dot{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+  .st.off{color:#ff5a72} .st.off .dot{background:#ff5a72;box-shadow:0 0 8px #ff5a72}
+  .scard p{font-size:11px;color:var(--muted);margin-top:9px;line-height:1.5}
+  .scard a{color:var(--cyan);text-decoration:none}
+  .scard a:hover{text-decoration:underline}
+
+  /* coming soon */
+  .soonwrap{text-align:center;padding:70px 20px}
+  .soonwrap .big{font-size:54px;margin-bottom:10px}
+  .soonwrap h2{font-size:26px;font-weight:900;margin-bottom:10px}
+  .soonwrap p{color:var(--muted);max-width:480px;margin:0 auto 24px;font-size:14px;line-height:1.6}
+  .toolgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;max-width:760px;margin:0 auto}
+  .tcard{background:var(--panel);border:1px dashed var(--line);border-radius:15px;padding:20px;text-align:left}
+  .tcard .ti{font-size:26px;margin-bottom:8px}
+  .tcard h4{font-size:14px;font-weight:800;margin-bottom:5px}
+  .tcard p{font-size:12px;color:var(--muted);margin:0;line-height:1.5}
+
+  footer{text-align:center;color:var(--muted);font-size:11px;margin-top:46px;line-height:1.7}
+  footer a{color:var(--cyan);text-decoration:none}
+  .err{background:rgba(255,90,114,.1);border:1px solid #ff5a72;color:#ffb9c2;border-radius:12px;padding:12px 16px;font-size:13px;margin-top:18px;display:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="hgrid">
+      <div class="brand">
+        <div class="kicker">Walibi Holland · Biddinghuizen · NL</div>
+        <div class="logo">DEFQON<span>.</span>1 <span style="font-weight:900">STATS</span></div>
+        <div class="subline">Edition <b>2026 · "Sacred Oath"</b> &nbsp;·&nbsp; <b id="festDates">Jun 25–28, 2026</b> &nbsp;·&nbsp; 52.45°N 5.72°E</div>
+      </div>
+      <div class="countdown" id="countdown"></div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="weather">🌩️ Weather Forecast</button>
+      <button class="tab" data-tab="history">📅 Weather History</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- WEATHER -->
+  <section class="panel active" id="panel-weather">
+    <div class="sectionhead">
+      <div>
+        <h2>Weather <em>Tracker</em></h2>
+        <p>Five-day outlook across the festival, aggregated live from multiple models with Netherlands-specific sources prioritized. Thursday (arrival) and Monday (departure) are flagged for attendees travelling from afar.</p>
+      </div>
+      <div class="controls">
+        <span class="updated" id="updated">Loading…</span>
+        <button class="btn alt" id="refresh">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="daygrid" id="daygrid"></div>
+
+    <div class="sources">
+      <h3>Data Sources</h3>
+      <div class="sub">Aggregated forecast = mean across all live models. NL-specific models weighted first. Live calls run in your browser — no key, no server.</div>
+      <div class="slist" id="slist"></div>
+    </div>
+  </section>
+
+  <!-- WEATHER HISTORY -->
+  <section class="panel" id="panel-history">
+    <div class="sectionhead">
+      <div>
+        <h2>Weather <em>History</em></h2>
+        <p>What ravers actually got. Measured conditions at the Walibi Holland site for every edition since the move to Biddinghuizen (2012), pulled from the ERA5 reanalysis archive — real recorded data, not forecasts.</p>
+      </div>
+      <div class="controls"><span class="updated" id="histUpdated">Open to load…</span></div>
+    </div>
+    <div class="err" id="histErr"></div>
+    <div class="records" id="records"></div>
+    <div class="histgrid" id="histgrid"></div>
+  </section>
+
+  <footer>
+    Built for the hardstyle faithful · Live weather via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> (Best-Match, KNMI Harmonie, GFS, ICON, Météo-France) + <a href="https://open-meteo.com/en/docs/seasonal-forecast-api" target="_blank">ECMWF Seasonal</a> long-range ·
+    NL sources: <a href="https://www.knmi.nl" target="_blank">KNMI</a>, <a href="https://www.buienradar.nl" target="_blank">Buienradar</a>, <a href="https://www.weeronline.nl" target="_blank">Weeronline</a> · History via <a href="https://open-meteo.com/en/docs/historical-weather-api" target="_blank">ERA5 reanalysis archive</a><br>
+    Unofficial fan project · Not affiliated with Q-dance or Defqon.1 · Forecasts are estimates and update as the festival approaches.
+  </footer>
+</main>
+
+<script>
+/* ====================== CONFIG ====================== */
+const VENUE = { lat: 52.45, lon: 5.72, tz: "Europe/Amsterdam" };
+
+// Festival window: Defqon.1 2026 = Thu Jun 25 – Sun Jun 28. Travel days bracket it.
+const DAYS = [
+  { date:"2026-06-25", name:"Thursday",  role:"festival", arrival:true, label:"Day 1" },
+  { date:"2026-06-26", name:"Friday",    role:"festival", label:"Day 2" },
+  { date:"2026-06-27", name:"Saturday",  role:"festival", label:"Day 3" },
+  { date:"2026-06-28", name:"Sunday",    role:"festival", label:"Finale" },
+  { date:"2026-06-29", name:"Monday",    role:"departure",label:"Departure Day" },
+];
+const FEST_START = "2026-06-25";
+
+// Live Open-Meteo models. Each is an independent "source" feeding the median + spread.
+const MODELS = [
+  { id:"knmi_seamless",  name:"KNMI Harmonie",  region:"Netherlands (2km)", priority:true },
+  { id:"ecmwf_ifs025",   name:"ECMWF IFS",      region:"Global · gold standard", priority:true },
+  { id:"best_match",     name:"Open-Meteo Blend", region:"Auto-blend", priority:false },
+  { id:"icon_seamless",  name:"DWD ICON",       region:"Europe", priority:false },
+  { id:"gfs_seamless",   name:"NOAA GFS",       region:"Global", priority:false },
+];
+
+// Long-range outlook — extended beyond the 16-day horizon, lower resolution / accuracy.
+// ECMWF SEAS5 (to ~7 months) + EC46 sub-seasonal, free & keyless via Open-Meteo seasonal API.
+const SEASONAL = { name:"ECMWF Seasonal (SEAS5/EC46)", region:"Long-range", days:183 };
+
+// Sources that need a key / lack browser CORS — shown transparently, stubbed not faked.
+const STUB_SOURCES = [
+  { name:"KNMI Data Platform", region:"Netherlands",
+    note:"Official Dutch met service. Open Data API requires a free API key (not bundled). KNMI's HARMONIE model is already included live via Open-Meteo above." ,
+    link:"https://developer.dataplatform.knmi.nl/open-data-api" },
+  { name:"Buienradar", region:"Netherlands",
+    note:"Free NL JSON feed (5-day). Auto-attempted live below; browsers often block it via CORS when opened from a file, in which case it's skipped gracefully.",
+    link:"https://www.buienradar.nl/overbuienradar/gratis-weerdata", attempt:"https://data.buienradar.nl/2.0/feed/json" },
+  { name:"Weeronline", region:"Netherlands",
+    note:"Popular NL consumer forecast. No free public API / key available, so it is listed for reference only.",
+    link:"https://www.weeronline.nl" },
+];
+
+/* WMO weather codes → emoji + text */
+const WMO = {
+  0:["☀️","Clear sky"],1:["🌤️","Mainly clear"],2:["⛅","Partly cloudy"],3:["☁️","Overcast"],
+  45:["🌫️","Fog"],48:["🌫️","Rime fog"],
+  51:["🌦️","Light drizzle"],53:["🌦️","Drizzle"],55:["🌧️","Dense drizzle"],
+  56:["🌧️","Freezing drizzle"],57:["🌧️","Freezing drizzle"],
+  61:["🌦️","Light rain"],63:["🌧️","Rain"],65:["🌧️","Heavy rain"],
+  66:["🌧️","Freezing rain"],67:["🌧️","Freezing rain"],
+  71:["🌨️","Light snow"],73:["🌨️","Snow"],75:["❄️","Heavy snow"],77:["🌨️","Snow grains"],
+  80:["🌦️","Rain showers"],81:["🌧️","Showers"],82:["⛈️","Violent showers"],
+  85:["🌨️","Snow showers"],86:["🌨️","Snow showers"],
+  95:["⛈️","Thunderstorm"],96:["⛈️","Storm w/ hail"],99:["⛈️","Severe storm w/ hail"],
+};
+const wmo = c => WMO[c] || ["🌡️","—"];
+const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const dir = d => COMPASS[Math.round(((d%360)/22.5))%16];
+const mode = arr => { const m={}; let best=arr[0],bc=0; arr.forEach(v=>{m[v]=(m[v]||0)+1; if(m[v]>bc){bc=m[v];best=v;}}); return best; };
+const median = arr => { if(!arr.length) return null; const s=[...arr].sort((a,b)=>a-b); const m=s.length>>1; return s.length%2? s[m] : (s[m-1]+s[m])/2; };
+const avg = arr => arr.length? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+const pad2 = n => String(n).padStart(2,"0");
+
+// Coherent DAY condition from actual metrics — never shows storms on a dry day.
+// sunFrac = sunshine_duration / daylight_duration (0..1).
+function condDay(pop, mm, sunFrac, code){
+  pop=pop??0; mm=mm??0;
+  if(mm>=12 || (pop>=75 && mm>=4)) return ["⛈️","Heavy rain / possible storms"];
+  if(mm>=4  || pop>=55)            return ["🌧️","Rain likely"];
+  if(mm>=0.6 || pop>=30)           return ["🌦️","Scattered showers"];
+  if(code===45||code===48)         return ["🌫️","Fog risk"];
+  if(sunFrac==null)                return ["⛅","Partly cloudy"];
+  if(sunFrac>=0.6)                 return ["☀️","Sunny"];
+  if(sunFrac>=0.35)                return ["🌤️","Mostly sunny"];
+  if(sunFrac>=0.15)                return ["⛅","Partly cloudy"];
+  return                                  ["☁️","Cloudy"];
+}
+// Coherent HOUR/part condition using cloud cover + precip.
+function condHour(pop, mm, cloud, code){
+  pop=pop??0; mm=mm??0;
+  if(mm>=4 || (pop>=70 && mm>=1)) return ["⛈️","Heavy rain"];
+  if(mm>=1 || pop>=55)            return ["🌧️","Rain"];
+  if(mm>=0.2 || pop>=30)          return ["🌦️","Showers"];
+  if(code===45||code===48)        return ["🌫️","Fog"];
+  if(cloud==null)                 return ["⛅","Partly cloudy"];
+  if(cloud<20)                    return ["☀️","Clear"];
+  if(cloud<50)                    return ["🌤️","Mostly clear"];
+  if(cloud<80)                    return ["⛅","Partly cloudy"];
+  return                                 ["☁️","Cloudy"];
+}
+
+/* ====================== STATE ====================== */
+let SOURCE_STATE = {}; // id -> {status, days:{date:row}}
+
+/* ====================== FETCH ====================== */
+async function fetchModel(model){
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${VENUE.lat}&longitude=${VENUE.lon}`
+    + `&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,sunshine_duration,daylight_duration`
+    + `&timezone=${encodeURIComponent(VENUE.tz)}&forecast_days=16&wind_speed_unit=kmh&models=${model.id}`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const j = await r.json();
+  const d = j.daily, out = {};
+  d.time.forEach((t,i)=>{
+    out[t] = {
+      hi:d.temperature_2m_max[i], lo:d.temperature_2m_min[i], code:d.weather_code[i],
+      pop:d.precipitation_probability_max[i], mm:d.precipitation_sum[i],
+      wind:d.wind_speed_10m_max[i], gust:d.wind_gusts_10m_max[i], wdir:d.wind_direction_10m_dominant[i],
+      sun:d.sunshine_duration?.[i], daylight:d.daylight_duration?.[i]
+    };
+  });
+  return out;
+}
+
+async function fetchSeasonal(){
+  // Long-range, lower-accuracy outlook so far-out days still show *something* with a clear caveat.
+  try{
+    const url = `https://seasonal-api.open-meteo.com/v1/seasonal?latitude=${VENUE.lat}&longitude=${VENUE.lon}`
+      + `&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum,wind_speed_10m_max`
+      + `&forecast_days=${SEASONAL.days}&timezone=${encodeURIComponent(VENUE.tz)}&wind_speed_unit=kmh`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j = await r.json(), d = j.daily, out = {};
+    d.time.forEach((t,i)=>{
+      out[t] = { hi:d.temperature_2m_max[i], lo:d.temperature_2m_min[i], code:d.weathercode[i],
+        pop:null, mm:d.precipitation_sum[i], wind:d.wind_speed_10m_max[i], gust:null, wdir:null };
+    });
+    return { status:"ok", days:out };
+  }catch(e){ return { status:"off", reason:e.message||"failed" }; }
+}
+
+async function fetchHourly(){
+  // Hour-by-hour detail within the ~16-day window. Activates per-day as the festival nears.
+  try{
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${VENUE.lat}&longitude=${VENUE.lon}`
+      + `&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m`
+      + `&timezone=${encodeURIComponent(VENUE.tz)}&forecast_days=16&wind_speed_unit=kmh`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const h = (await r.json()).hourly, byDate = {};
+    h.time.forEach((t,i)=>{
+      const [date,clock] = t.split("T");
+      (byDate[date] ||= []).push({ hr:+clock.slice(0,2), temp:h.temperature_2m[i],
+        pop:h.precipitation_probability[i], mm:h.precipitation[i], code:h.weather_code[i],
+        cloud:h.cloud_cover?.[i], wind:h.wind_speed_10m[i], gust:h.wind_gusts_10m[i] });
+    });
+    return { status:"ok", byDate };
+  }catch(e){ return { status:"off", reason:e.message||"failed" }; }
+}
+
+async function tryBuienradar(){
+  // Best-effort live NL feed. CORS may block it from file://; handled silently.
+  try{
+    const r = await fetch("https://data.buienradar.nl/2.0/feed/json");
+    if(!r.ok) throw 0;
+    const j = await r.json();
+    const out = {};
+    (j.forecast?.fivedayforecast||[]).forEach(f=>{
+      out[f.day] = { hi:f.maxtemperature, lo:f.mintemperature, code:null,
+        pop:f.rainChance, mm:f.mmRainMin, wind:null, gust:null, wdir:null,
+        cond:f.weatherdescription };
+    });
+    return { status:"ok", days:out };
+  }catch(e){ return { status:"off", reason:"CORS-blocked from local file" }; }
+}
+
+async function loadAll(){
+  document.getElementById("updated").textContent = "Fetching live models…";
+  document.getElementById("err").style.display="none";
+  SOURCE_STATE = {};
+
+  const results = await Promise.allSettled(MODELS.map(m=>fetchModel(m)));
+  let anyOk = false;
+  results.forEach((res,i)=>{
+    const m = MODELS[i];
+    if(res.status==="fulfilled"){ SOURCE_STATE[m.id]={status:"ok",days:res.value}; anyOk=true; }
+    else { SOURCE_STATE[m.id]={status:"off",reason:res.reason?.message||"failed"}; }
+  });
+
+  // attempt Buienradar + long-range seasonal outlook + hourly detail
+  const [br, seas, hrly] = await Promise.all([tryBuienradar(), fetchSeasonal(), fetchHourly()]);
+  SOURCE_STATE["buienradar"] = br;
+  SOURCE_STATE["seasonal"] = seas;
+  SOURCE_STATE["hourly"] = hrly;
+
+  if(!anyOk){
+    const e=document.getElementById("err");
+    e.style.display="block";
+    e.textContent="⚠️ Couldn't reach any live weather model. Check your internet connection and hit Refresh.";
+  }
+  render();
+  const now=new Date();
+  document.getElementById("updated").textContent="Updated "+now.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+
+/* ====================== AGGREGATE ====================== */
+// Robust central estimate: MEDIAN across models (rejects outliers far better than a mean),
+// plus the model SPREAD so disagreement is shown honestly instead of hidden in an average.
+function summarize(rows){
+  if(!rows.length) return null;
+  const vals = k => rows.map(r=>r[k]).filter(x=>x!=null&&!isNaN(x));
+  const med  = k => median(vals(k));
+  const his  = vals("hi");
+  const sa=avg(vals("sun")), da=avg(vals("daylight"));
+  const sunFrac = (sa!=null && da!=null && da>0) ? Math.max(0,Math.min(1, sa/da)) : null;
+  return { n:rows.length, rows,
+    hi:med("hi"), lo:med("lo"), pop:med("pop"), mm:med("mm"),
+    wind:med("wind"), gust:med("gust"), wdir:med("wdir"),
+    hiMin: his.length?Math.min(...his):null, hiMax: his.length?Math.max(...his):null,
+    sunFrac, code: vals("code").length? mode(vals("code")) : null };
+}
+
+function aggregate(date){
+  // Headline = median over the NWP models only (consistent, comparable variables).
+  const modelRows=[];
+  MODELS.forEach(m=>{
+    const s=SOURCE_STATE[m.id];
+    if(s?.status==="ok" && s.days[date]) modelRows.push({name:m.name,priority:m.priority,...s.days[date]});
+  });
+  // Extra references shown in the breakdown but NOT mixed into the headline median.
+  const extra=[];
+  const br=SOURCE_STATE["buienradar"];
+  if(br?.status==="ok" && br.days[date]) extra.push({name:"Buienradar",partial:true,...br.days[date]});
+  const seas=SOURCE_STATE["seasonal"];
+  const seasRow = (seas?.status==="ok" && seas.days[date]) ? {name:SEASONAL.name,longRange:true,...seas.days[date]} : null;
+
+  if(modelRows.length){
+    const head=summarize(modelRows); head.confidence="high";
+    head.rows=[...modelRows, ...extra, ...(seasRow?[seasRow]:[])];
+    return head;
+  }
+  if(seasRow){ const s=summarize([seasRow]); s.confidence="low"; s.rows=[seasRow]; return s; }
+  return null;
+}
+
+/* ====================== HOURLY ====================== */
+// Per-day festival "prime" hours. Sessions run past midnight, so each night's
+// 00–02 tail is highlighted on the *next* day's card.
+function primeFn(day){
+  if(day.role==="departure") return hr=>hr<=12;       // Monday: wind-down until 12:00
+  if(day.arrival)            return hr=>hr>=12;        // Thursday arrival: 12:00 → 02:00
+  return                            hr=>hr>=10||hr<=2; // Fri/Sat/Sun: 10:00 → 02:00
+}
+function primeLabel(day){
+  if(day.role==="departure") return "until 12:00";
+  if(day.arrival)            return "12:00–02:00";
+  return                            "10:00–02:00";
+}
+
+function hourlyBlock(day){
+  const date = day.date;
+  const hd = SOURCE_STATE["hourly"];
+  const arr = hd?.status==="ok" ? hd.byDate?.[date] : null;
+  if(!arr || !arr.length){
+    return `<div class="hourly"><div class="hhead">Hour-by-hour</div>
+      <div class="hnote">🕐 Hour-by-hour unlocks once this day enters the ~16-day forecast window — it fills in automatically as the festival nears.</div></div>`;
+  }
+  const W=720,H=120,pad=10;
+  const temps=arr.map(h=>h.temp);
+  const tmin=Math.min(...temps), tmax=Math.max(...temps), span=(tmax-tmin)||1;
+  const x=i=>pad+i*(W-2*pad)/(arr.length-1);
+  const y=t=>H-20-(t-tmin)/span*(H-38);
+  const line=arr.map((h,i)=>`${i?'L':'M'}${x(i).toFixed(1)} ${y(h.temp).toFixed(1)}`).join(" ");
+  const area=`${line} L${x(arr.length-1).toFixed(1)} ${H-20} L${x(0).toFixed(1)} ${H-20} Z`;
+  const bars=arr.map((h,i)=>{ const p=h.pop; if(p==null||p<=0) return "";
+    const bh=(p/100)*(H-38); return `<rect x="${(x(i)-3).toFixed(1)}" y="${(H-20-bh).toFixed(1)}" width="6" height="${bh.toFixed(1)}" rx="1.5" fill="rgba(25,227,255,.30)"/>`; }).join("");
+  const ticks=[0,6,12,18,23].map(hr=>{ const i=arr.findIndex(h=>h.hr===hr); if(i<0) return "";
+    return `<text x="${x(i).toFixed(1)}" y="${H-4}" fill="#9a8fc4" font-size="9" text-anchor="middle">${String(hr).padStart(2,'0')}h</text>`; }).join("");
+  const svg=`<svg viewBox="0 0 ${W} ${H}" class="hsvg" preserveAspectRatio="none">
+    <defs><linearGradient id="hg-${date}" x1="0" x2="1"><stop offset="0" stop-color="#19e3ff"/><stop offset="1" stop-color="#ff1e6e"/></linearGradient></defs>
+    ${bars}<path d="${area}" fill="rgba(255,30,110,.12)"/>
+    <path d="${line}" fill="none" stroke="url(#hg-${date})" stroke-width="2.5"/>${ticks}</svg>`;
+  // ---- Part-of-day overview (Morning / Midday / Evening / Night) ----
+  const PARTS=[
+    {label:"Morning",emo:"🌅",test:h=>h.hr>=6&&h.hr<12},
+    {label:"Midday", emo:"☀️",test:h=>h.hr>=12&&h.hr<17},
+    {label:"Evening",emo:"🌆",test:h=>h.hr>=17&&h.hr<22},
+    {label:"Night",  emo:"🌙",test:h=>h.hr>=22||h.hr<6},
+  ];
+  const ranges={Morning:"06–12",Midday:"12–17",Evening:"17–22",Night:"22–06"};
+  const partsHtml=PARTS.map(p=>{
+    const hs=arr.filter(p.test);
+    if(!hs.length) return "";
+    const t=avg(hs.map(h=>h.temp));
+    const maxPop=Math.max(...hs.map(h=>h.pop??0));
+    const sumMm=hs.reduce((s,h)=>s+(h.mm??0),0);
+    const w=avg(hs.map(h=>h.wind));
+    const cl=avg(hs.map(h=>h.cloud).filter(x=>x!=null));
+    const [ce,ct]=condHour(maxPop,sumMm,cl,mode(hs.map(h=>h.code)));
+    return `<div class="part">
+      <div class="plabel">${p.emo} ${p.label}<span class="ptime">${ranges[p.label]}</span></div>
+      <div class="pmain"><span class="pemo">${ce}</span><span class="ptemp">${Math.round(t)}°</span></div>
+      <div class="pcond">${ct}</div>
+      <div class="pmeta">💧 ${Math.round(maxPop)}% · 💨 ${Math.round(w)}km/h</div>
+    </div>`;
+  }).join("");
+  // ---- All hours as rows (readable on mobile + desktop) ----
+  const isPrime=primeFn(day);
+  const rowsHtml=arr.map(h=>{ const [e]=condHour(h.pop,h.mm,h.cloud,h.code); const prime=isPrime(h.hr);
+    return `<div class="hrow${prime?' prime':''}">
+      <span class="hr-t">${pad2(h.hr)}:00</span><span class="hr-e">${e}</span>
+      <span class="hr-temp">${Math.round(h.temp)}°</span>
+      <span class="hr-pop">💧 ${h.pop!=null?h.pop+'%':'–'}</span>
+      <span class="hr-w">💨 ${Math.round(h.wind)}</span></div>`; }).join("");
+  return `<div class="hourly"><div class="hhead">Hour-by-hour</div>
+    <div class="hsvgwrap">${svg}</div>
+    <div class="parts">${partsHtml}</div>
+    <details class="bd subhours"><summary>All ${arr.length} hours</summary><div class="hrows">${rowsHtml}</div></details>
+    <div class="hlegend"><span class="pdot"></span> festival hours (${primeLabel(day)}) highlighted · curve = temperature · <span style="color:var(--cyan)">▮</span> precip chance</div>
+  </div>`;
+}
+
+/* ====================== RENDER ====================== */
+function render(){
+  const grid=document.getElementById("daygrid"); grid.innerHTML="";
+  DAYS.forEach(day=>{
+    const a=aggregate(day.date);
+    const el=document.createElement("div");
+    el.className="day"+(day.role!=="festival"?" travel":"")+(day.date===FEST_START||day.role==="festival"?" peak":"");
+    const badge = day.arrival ? `<span class="badge arr">✈ Arrival · ${day.label}</span>`
+               : day.role==="departure" ? `<span class="badge dep">✈ Departure</span>`
+               : `<span class="badge fest">${day.label}</span>`;
+    const dObj=new Date(day.date+"T12:00");
+    const dstr=dObj.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+
+    let body;
+    if(a){
+      const low = a.confidence==="low";
+      const [emo,txt]=condDay(a.pop,a.mm,a.sunFrac,a.code);
+      const hasPop = a.pop!=null;
+      const sp = (a.hiMin!=null&&a.hiMax!=null)? (a.hiMax-a.hiMin) : null;
+      const spreadHtml = (!low && sp!=null)
+        ? `<div class="spread">${
+            sp<=2 ? `<b class="agree">All ${a.n} forecasts agree closely</b> — expect a high near ${Math.round(a.hi)}°. Pretty reliable.`
+          : sp<=4 ? `<b class="ok">The ${a.n} forecasts mostly agree</b> — the high should land around ${Math.round(a.hiMin)}–${Math.round(a.hiMax)}°.`
+          :         `<b class="loose">The ${a.n} forecasts don't agree yet</b> — the high could be anywhere from ${Math.round(a.hiMin)}° to ${Math.round(a.hiMax)}°, so this one's still uncertain.`
+          }</div>`
+        : `<div class="spread">${low?'<b style="color:var(--amber)">Long-range outlook</b> — a rough early signal, not yet reliable.':`Based on ${a.n} forecast model${a.n>1?'s':''}.`}</div>`;
+      const popPct=Math.round(a.pop??0);
+      const rows=a.rows.map(r=>{
+        const c=r.code!=null?wmo(r.code)[0]:"·";
+        const tag=r.priority?' ★':r.longRange?' ~':r.partial?' *':'';
+        return `<div class="srow"><span>${c} ${r.name}${tag}</span>`
+          +`<span class="sv">${r.hi!=null?Math.round(r.hi)+'°':'–'}${r.lo!=null?' / '+Math.round(r.lo)+'°':''}</span></div>`;
+      }).join("");
+      const banner = low
+        ? `<div class="lowconf">📡 Long-range outlook · low confidence — beyond the 14–16 day high-accuracy window. Refines as the festival nears.</div>` : "";
+      const precipRow = hasPop
+        ? `<div class="m"><span class="ml">🌧️ Precip</span><div class="bar"><i style="width:${popPct}%"></i></div><span class="mv">${popPct}%</span></div>`
+        : `<div class="m"><span class="ml">🌧️ Precip</span><span class="mv" style="color:var(--muted)">n/a (long-range)</span></div>`;
+      body=`
+        ${banner}
+        <div class="day-main">
+          <div class="day-summary">
+            <div class="icon">${emo}</div>
+            <div class="cond">${txt}</div>
+            <div class="temps"><span class="thi">${Math.round(a.hi)}<span class="tunit">°</span></span>
+              <span class="tlo">▼ ${Math.round(a.lo)}°C</span></div>
+            <div class="metrics">
+              ${precipRow}
+              <div class="m"><span class="ml">💧 Rain</span><span class="mv">${a.mm!=null?a.mm.toFixed(1)+' mm':'–'}</span></div>
+              <div class="m"><span class="ml">💨 Wind</span><span class="mv">${a.wind!=null?Math.round(a.wind)+' km/h':'–'} ${a.wdir!=null?dir(a.wdir):''}</span></div>
+              <div class="m"><span class="ml">🌬️ Gusts</span><span class="mv">${a.gust!=null?Math.round(a.gust)+' km/h':'n/a'}</span></div>
+            </div>
+            ${spreadHtml}
+            <details class="bd"><summary>Per-source</summary>${rows}<div style="font-size:9px;color:var(--muted);margin-top:6px">★ priority model &nbsp; ~ long-range &nbsp; * partial</div></details>
+          </div>
+          <div class="day-detail">${hourlyBlock(day)}</div>
+        </div>`;
+    } else {
+      // beyond forecast horizon or unavailable
+      const today=new Date(); const target=new Date(day.date+"T00:00");
+      const daysOut=Math.ceil((target-today)/86400000);
+      body=`<div class="nodata"><div class="em">🛰️</div>
+        <p><b>Forecast not yet available</b><br>
+        ${daysOut>0?`This day is <b>${daysOut} days</b> out. Models reach ~16 days — reopen or hit Refresh as the festival nears and this card fills in automatically.`:`No model data returned for this date.`}</p></div>`;
+    }
+
+    el.innerHTML=`
+      <div class="dtop">
+        <div><div class="dname">${day.name}</div><div class="ddate">${dstr} 2026</div></div>
+        ${badge}
+      </div>${body}`;
+    grid.appendChild(el);
+  });
+  renderSources();
+}
+
+function renderSources(){
+  const wrap=document.getElementById("slist"); wrap.innerHTML="";
+  // live models
+  MODELS.forEach(m=>{
+    const s=SOURCE_STATE[m.id]||{status:"wait"};
+    const cls=s.status==="ok"?"ok":s.status==="off"?"off":"wait";
+    const lbl=s.status==="ok"?"Live":s.status==="off"?"Unavailable":"Loading";
+    wrap.insertAdjacentHTML("beforeend",`
+      <div class="scard">
+        <div class="sh"><span class="nm">${m.name}${m.priority?' ★':''}</span><span class="st ${cls}"><span class="dot"></span>${lbl}</span></div>
+        <p><span class="rg">${m.region}</span> · via Open-Meteo · no key.${s.status==="off"?` <span style="color:#ff8a98">${s.reason||''}</span>`:''}</p>
+      </div>`);
+  });
+  // long-range seasonal outlook
+  const seas=SOURCE_STATE["seasonal"]||{status:"wait"};
+  const scls=seas.status==="ok"?"ok":seas.status==="off"?"off":"wait";
+  const slbl=seas.status==="ok"?"Live · low-acc":seas.status==="off"?"Unavailable":"Loading";
+  wrap.insertAdjacentHTML("beforeend",`
+    <div class="scard">
+      <div class="sh"><span class="nm">${SEASONAL.name} ~</span><span class="st ${scls}"><span class="dot"></span>${slbl}</span></div>
+      <p><span class="rg">Long-range</span> · reaches ~7 months out at 36 km / ensemble. Lower accuracy — fills far-out cards until the 16-day models arrive. <a href="https://open-meteo.com/en/docs/seasonal-forecast-api" target="_blank">docs ↗</a></p>
+    </div>`);
+  // buienradar live attempt
+  const br=SOURCE_STATE["buienradar"];
+  // stub / reference sources
+  STUB_SOURCES.forEach(ss=>{
+    let cls="wait",lbl="Reference";
+    if(ss.name==="Buienradar"){
+      if(br?.status==="ok"){cls="ok";lbl="Live";}
+      else {cls="off";lbl="Skipped";}
+    } else if(ss.name==="KNMI Data Platform"){ cls="wait"; lbl="Key needed"; }
+    else { cls="wait"; lbl="No public API"; }
+    wrap.insertAdjacentHTML("beforeend",`
+      <div class="scard">
+        <div class="sh"><span class="nm">${ss.name}</span><span class="st ${cls}"><span class="dot"></span>${lbl}</span></div>
+        <p><span class="rg">${ss.region}</span> · ${ss.note} <a href="${ss.link}" target="_blank">docs ↗</a></p>
+      </div>`);
+  });
+}
+
+/* ====================== COUNTDOWN ====================== */
+function countdown(){
+  const wrap=document.getElementById("countdown");
+  const start=new Date("2026-06-25T12:00:00+02:00");
+  const end=new Date("2026-06-29T00:00:00+02:00");
+  const now=new Date();
+  let html;
+  if(now>=start && now<end){
+    html=`<div class="cd live"><div class="n">LIVE</div><div class="l">On now</div></div>`;
+  } else {
+    const diff=start-now;
+    const d=Math.floor(diff/86400000), h=Math.floor(diff%86400000/3600000), m=Math.floor(diff%3600000/60000);
+    html=`<div class="cd"><div class="n">${d}</div><div class="l">Days</div></div>
+          <div class="cd"><div class="n">${h}</div><div class="l">Hours</div></div>
+          <div class="cd"><div class="n">${m}</div><div class="l">Mins</div></div>`;
+  }
+  wrap.innerHTML=html;
+}
+
+/* ====================== HISTORY ====================== */
+// Walibi Holland / Biddinghuizen era only (same venue & coordinates). 2020 cancelled, 2021 virtual.
+const EDITIONS = [
+  {year:2025,start:"2025-06-26",end:"2025-06-29",anthem:"Where Legends Rise"},
+  {year:2024,start:"2024-06-27",end:"2024-06-30",anthem:"Power of the Tribe"},
+  {year:2023,start:"2023-06-22",end:"2023-06-25",anthem:"Path of the Warrior"},
+  {year:2022,start:"2022-06-23",end:"2022-06-26",anthem:"Primal Energy"},
+  {year:2019,start:"2019-06-28",end:"2019-06-30",anthem:"One Tribe"},
+  {year:2018,start:"2018-06-22",end:"2018-06-24",anthem:"Maximum Force"},
+  {year:2017,start:"2017-06-23",end:"2017-06-25",anthem:"Victory Forever"},
+  {year:2016,start:"2016-06-24",end:"2016-06-26",anthem:"Dragonblood"},
+  {year:2015,start:"2015-06-19",end:"2015-06-21",anthem:"No Guts, No Glory"},
+  {year:2014,start:"2014-06-27",end:"2014-06-29",anthem:"Survival of the Fittest"},
+  {year:2013,start:"2013-06-21",end:"2013-06-23",anthem:"Weekend Warriors"},
+  {year:2012,start:"2012-06-21",end:"2012-06-23",anthem:"World of Madness"},
+];
+let HIST_DONE=false, HIST=[], HIST_BY_YEAR={}, HIST_RUNNING=false, HIST_FAIL=new Set();
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+async function fetchJSON(url,tries=4){
+  for(let i=0;i<tries;i++){
+    try{
+      const r=await fetch(url);
+      if(r.status===429){ await sleep(700*(i+1)); continue; }   // rate-limited → back off & retry
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      return await r.json();
+    }catch(e){ if(i===tries-1) throw e; await sleep(500*(i+1)); }
+  }
+  throw new Error("rate-limited");
+}
+
+async function fetchEdition(ed){
+  const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${VENUE.lat}&longitude=${VENUE.lon}`
+    +`&start_date=${ed.start}&end_date=${ed.end}`
+    +`&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,wind_speed_10m_max,wind_gusts_10m_max`
+    +`&timezone=${encodeURIComponent(VENUE.tz)}&wind_speed_unit=kmh`;
+  const d=(await fetchJSON(url)).daily;
+  const days=d.time.map((t,i)=>({date:t,hi:d.temperature_2m_max[i],lo:d.temperature_2m_min[i],
+    mm:d.precipitation_sum[i],code:d.weather_code[i],wind:d.wind_speed_10m_max[i],gust:d.wind_gusts_10m_max[i]}));
+  const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+  return {...ed, days,
+    avgHi:avg(days.map(x=>x.hi)), avgLo:avg(days.map(x=>x.lo)), maxHi:Math.max(...days.map(x=>x.hi)),
+    totalRain:days.reduce((s,x)=>s+x.mm,0), wettest:Math.max(...days.map(x=>x.mm)),
+    maxWind:Math.max(...days.map(x=>x.wind)), maxGust:Math.max(...days.map(x=>x.gust)),
+    code:mode(days.map(x=>x.code))};
+}
+
+async function loadHistory(){
+  if(HIST_DONE || HIST_RUNNING) return;   // don't double-run; reopening retries stragglers
+  HIST_RUNNING=true;
+  const grid=document.getElementById("histgrid");
+  const errEl=document.getElementById("histErr"), upd=document.getElementById("histUpdated");
+  errEl.style.display="none";
+  if(!Object.keys(HIST_BY_YEAR).length)
+    grid.innerHTML=`<div class="histload">⛏️ Digging up recorded weather…</div>`;
+  // Sequential + retry: avoids the API's per-minute burst limit that was silently dropping editions.
+  for(const ed of EDITIONS){
+    if(HIST_BY_YEAR[ed.year]) continue;          // already have it (from a prior partial run)
+    upd.textContent=`Loading… ${Object.keys(HIST_BY_YEAR).length}/${EDITIONS.length}`;
+    HIST_FAIL.delete(ed.year);
+    try{ HIST_BY_YEAR[ed.year]=await fetchEdition(ed); }
+    catch(e){ HIST_FAIL.add(ed.year); }          // record failure so it renders a visible error row
+    renderHistory();
+    await sleep(120);                            // gentle pacing between requests
+  }
+  HIST_RUNNING=false;
+  const have=Object.keys(HIST_BY_YEAR).length;
+  if(have===EDITIONS.length){ HIST_DONE=true; upd.textContent="Recorded data · ERA5 archive"; }
+  else { upd.textContent=`Loaded ${have}/${EDITIONS.length} · ${HIST_FAIL.size} failed`; }
+  if(HIST_FAIL.size){ errEl.style.display="block";
+    errEl.innerHTML=`⚠️ ${HIST_FAIL.size} edition${HIST_FAIL.size>1?'s':''} couldn't load (archive API rate-limited the request). Use the <b>Retry</b> button on the affected row${HIST_FAIL.size>1?'s':''} below, or reopen the tab.`; }
+}
+
+// Retry a single failed edition (called from the error row's button)
+async function retryEdition(year){
+  const ed=EDITIONS.find(e=>e.year===year); if(!ed) return;
+  HIST_FAIL.delete(year); renderHistory();
+  try{ HIST_BY_YEAR[year]=await fetchEdition(ed); }
+  catch(e){ HIST_FAIL.add(year); }
+  renderHistory();
+  if(Object.keys(HIST_BY_YEAR).length===EDITIONS.length){
+    HIST_DONE=true;
+    document.getElementById("histErr").style.display="none";
+    document.getElementById("histUpdated").textContent="Recorded data · ERA5 archive";
+  }
+}
+
+function fmtRange(s,e){
+  const a=new Date(s+"T12:00"), b=new Date(e+"T12:00");
+  const mo=d=>d.toLocaleDateString('en-GB',{month:'short'});
+  return mo(a)===mo(b) ? `${a.getDate()}–${b.getDate()} ${mo(a)}` : `${a.getDate()} ${mo(a)} – ${b.getDate()} ${mo(b)}`;
+}
+
+function renderHistory(){
+  // build HIST (loaded editions, in chronological-desc order) fresh each render
+  HIST=EDITIONS.filter(e=>HIST_BY_YEAR[e.year]).map(e=>HIST_BY_YEAR[e.year]);
+  const recEl=document.getElementById("records");
+  let hottest,wettest;
+  if(HIST.length){
+    hottest=HIST.reduce((a,b)=>b.maxHi>a.maxHi?b:a);
+    wettest=HIST.reduce((a,b)=>b.totalRain>a.totalRain?b:a);
+    const driest =HIST.reduce((a,b)=>b.totalRain<a.totalRain?b:a);
+    const coolest=HIST.reduce((a,b)=>b.avgHi<a.avgHi?b:a);
+    const windiest=HIST.reduce((a,b)=>b.maxWind>a.maxWind?b:a);
+    const rec=(cls,emo,label,val,year)=>`<div class="rec ${cls}"><span class="re">${emo}</span>
+      <div class="rl">${label}</div><div class="rv">${val}</div><div class="ry">${year}</div></div>`;
+    recEl.innerHTML=
+      rec("hot","🔥","Hottest peak",`${hottest.maxHi.toFixed(1)}°`,hottest.year)
+     +rec("wet","🌧️","Wettest edition",`${wettest.totalRain.toFixed(1)} mm`,wettest.year)
+     +rec("","☀️","Driest edition",`${HIST.reduce((a,b)=>b.totalRain<a.totalRain?b:a).totalRain.toFixed(1)} mm`,driest.year)
+     +rec("","🥶","Coolest (avg high)",`${coolest.avgHi.toFixed(1)}°`,coolest.year)
+     +rec("","💨","Windiest peak",`${Math.round(windiest.maxWind)} km/h`,windiest.year);
+  } else recEl.innerHTML="";
+
+  const grid=document.getElementById("histgrid"); grid.innerHTML="";
+  // render EVERY edition: data row if loaded, otherwise a visible error/retry row
+  EDITIONS.forEach(meta=>{
+    const ed=HIST_BY_YEAR[meta.year];
+    if(!ed){
+      const el=document.createElement("div");
+      el.className="edrow fail";
+      el.innerHTML=`
+        <div class="edhead">
+          <div class="edtitle"><span class="yr">${meta.year}</span><span class="anthem">“${meta.anthem}”</span>
+            <span class="dr">${fmtRange(meta.start,meta.end)}</span></div>
+          <div class="edmeta">
+            <span class="pill err">⚠️ ${HIST_FAIL.has(meta.year)?'Failed to load (rate-limited)':'Loading…'}</span>
+            ${HIST_FAIL.has(meta.year)?`<button class="btn alt retrybtn" onclick="retryEdition(${meta.year})">↻ Retry</button>`:''}
+          </div>
+        </div>`;
+      grid.appendChild(el);
+      return;
+    }
+    const isHot=ed.year===hottest.year, isWet=ed.year===wettest.year;
+    const recPill = isHot ? `<span class="pill hot">🔥 Hottest ever</span>`
+                  : isWet ? `<span class="pill wet">🌧️ Wettest ever</span>` : "";
+    // one card per festival day
+    const cards=ed.days.map(x=>{
+      const [emo,txt]=wmo(x.code);
+      const d=new Date(x.date+"T12:00");
+      const wd=d.toLocaleDateString('en-GB',{weekday:'long'});
+      const dt=d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+      const wet = x.mm>=5, hotday = x.hi>=28;
+      return `<div class="hday">
+        <div class="dtop"><div><div class="dname">${wd}</div><div class="ddate">${dt}</div></div>
+          ${hotday?`<span class="badge fest">🔥 ${Math.round(x.hi)}°</span>`:wet?`<span class="badge arr">🌧️ wet</span>`:""}</div>
+        <div class="icon">${emo}</div>
+        <div class="cond">${txt}</div>
+        <div class="temps"><span class="thi">${Math.round(x.hi)}<span class="tunit">°</span></span>
+          <span class="tlo">▼ ${Math.round(x.lo)}°C</span></div>
+        <div class="metrics">
+          <div class="m"><span class="ml">💧 Rain</span><span class="mv">${x.mm.toFixed(1)} mm</span></div>
+          <div class="m"><span class="ml">💨 Wind</span><span class="mv">${Math.round(x.wind)} km/h</span></div>
+          <div class="m"><span class="ml">🌬️ Gusts</span><span class="mv">${Math.round(x.gust)} km/h</span></div>
+        </div></div>`;
+    }).join("");
+    const el=document.createElement("div");
+    el.className="edrow"+(isHot?" hot":isWet?" wet":"");
+    el.innerHTML=`
+      <div class="edhead">
+        <div class="edtitle"><span class="yr">${ed.year}</span><span class="anthem">“${ed.anthem}”</span>
+          <span class="dr">${fmtRange(ed.start,ed.end)} · ${ed.days.length} days</span></div>
+        <div class="edmeta">
+          ${recPill}
+          <span class="pill">avg high <b>${ed.avgHi.toFixed(1)}°</b></span>
+          <span class="pill">peak <b>${ed.maxHi.toFixed(1)}°</b></span>
+          <span class="pill">rain <b>${ed.totalRain.toFixed(1)}mm</b></span>
+          <span class="pill">max wind <b>${Math.round(ed.maxWind)}km/h</b></span>
+        </div>
+      </div>
+      <div class="edcards">${cards}</div>`;
+    grid.appendChild(el);
+  });
+}
+
+/* ====================== TABS ====================== */
+document.getElementById("tabs").addEventListener("click",e=>{
+  const b=e.target.closest(".tab"); if(!b) return;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  b.classList.add("active");
+  document.getElementById("panel-"+b.dataset.tab).classList.add("active");
+  if(b.dataset.tab==="history") loadHistory();
+});
+document.getElementById("refresh").addEventListener("click",loadAll);
+
+/* ====================== INIT ====================== */
+countdown(); setInterval(countdown,60000);
+render();        // paint placeholders immediately
+loadAll();       // then live data
+</script>
+</body>
+</html>

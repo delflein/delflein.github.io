@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dominik · Self-Contained SPAs</title>
+<style>
+  :root{
+    --bg:#06040d; --panel:#130c28; --panel2:#1b1138; --line:#2a1c52;
+    --magenta:#ff1e6e; --purple:#8b2bff; --cyan:#19e3ff; --text:#f2ecff; --muted:#9a8fc4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(139,43,255,.22), transparent 60%),
+      radial-gradient(1000px 500px at 0% 0%, rgba(255,30,110,.18), transparent 55%),
+      radial-gradient(900px 700px at 50% 120%, rgba(25,227,255,.12), transparent 60%),
+      var(--bg);
+    display:flex;flex-direction:column;align-items:center;padding:64px 20px;
+  }
+  .wrap{width:100%;max-width:720px}
+  .kicker{font-size:12px;letter-spacing:5px;color:var(--cyan);text-transform:uppercase;font-weight:700;margin-bottom:10px}
+  h1{font-size:clamp(32px,6vw,52px);font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:12px;
+    background:linear-gradient(92deg,var(--magenta),var(--purple) 55%,var(--cyan));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{color:var(--muted);font-size:15px;line-height:1.6;margin-bottom:36px;max-width:560px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+  a.card{display:block;text-decoration:none;color:inherit;background:linear-gradient(165deg,var(--panel2),var(--panel));
+    border:1px solid var(--line);border-radius:18px;padding:22px;transition:.2s}
+  a.card:hover{border-color:var(--purple);box-shadow:0 10px 30px rgba(139,43,255,.18);transform:translateY(-3px)}
+  .ico{font-size:38px;line-height:1;margin-bottom:14px}
+  .ct{font-size:18px;font-weight:900;margin-bottom:6px}
+  .cd{font-size:13px;color:var(--muted);line-height:1.5}
+  .arrow{margin-top:16px;font-size:13px;font-weight:700;color:var(--cyan)}
+  footer{color:var(--muted);font-size:11px;margin-top:48px;text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="kicker">delflein.github.io</div>
+    <h1>Self-Contained SPAs</h1>
+    <p class="lede">A small collection of single-file web apps — each one a standalone HTML page, served over HTTPS so it runs anywhere, including iOS Safari.</p>
+    <div class="grid">
+      <a class="card" href="./defqon1-weather/">
+        <div class="ico">🌩️</div>
+        <div class="ct">Defqon.1 Festival Stats</div>
+        <div class="cd">Live multi-model weather forecast &amp; historical weather for Defqon.1 2026 at Walibi Holland.</div>
+        <div class="arrow">Open →</div>
+      </a>
+    </div>
+    <footer>Hosted on GitHub Pages · single-file, no build step</footer>
+  </div>
+</body>
+</html>
