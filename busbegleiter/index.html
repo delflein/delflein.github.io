@@ -350,7 +350,7 @@ async function doImport(file){
 }
 function loadDemo(){
   if(!T())return;
-  const raw=[['Pascal Koßma',1,1],['Patrycja Szulc',0,1],['Patrick Koßma',1,1],['Kevin Späth',0,1],['Marleen Zabel',1,0],['Tim Kilthau',0,0],['Dominik Elflein',1,1],['Gina Hille',0,1],['Robin Tolle',1,1],['Sarah-Lena Meyer-Hahn',1,1],['Leon Kersting',1,0],['Celine Stypmann',1,1]];
+  const raw=[['Anna Alpha',1,1],['Max Mustermann',0,1],['Bernd Beta',1,1],['Claus Carl-Heinz',1,1],['Dieter Drews',1,0],['Frank Finger',1,1]];
   const parts=[],books=[];let bid=0,cur=null;
   raw.forEach((r,i)=>{const name=r[0],isB=r[1],paidGrp=r[2];if(isB){cur={id:++bid,bucher:name,handy:'017'+(60000000+i*111111),paid:!!paidGrp};books.push(cur);}
     parts.push({nr:i+1,name:name,handy:'017'+(60000000+i*111111),abfahrtsort:i%7===0?'Rheine':(i%5===0?'Bremen':'Hamburg'),ticket:i%5===0?'Premium':'REG',skat:'',sondergepaeck:i%3===0?'faltbarer Bollerwagen, Sporttasche':'',camp:i%2===0,kommentar:'',buchungId:cur.id,bucher:cur.bucher,istBucher:name===cur.bucher,bezahlt:cur.paid,anwesend:false,sitzplatz:'',signature:null,status:'',manuell:false});});
