@@ -96,6 +96,15 @@ input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{b
 .sigwrap .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#aaa;pointer-events:none}
 .sigsaved{border:1px solid var(--accent);border-radius:12px;background:#fff;padding:6px}
 .sigsaved img{width:100%;display:block}
+.sigscreen{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column}
+.sigscreen .sbar{background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(9px + var(--safe-t)) 12px 9px;font-weight:600;font-size:16px}
+.sigscreen .sbar button{color:#fff;font-weight:600}
+.sigscreen .scanvas{flex:1;margin:10px;border:1px solid var(--line);border-radius:12px;background:#fff;position:relative;touch-action:none;overflow:hidden}
+.sigscreen .scanvas canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.sigscreen .sph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#bbb;pointer-events:none;font-size:15px;text-align:center;padding:20px;line-height:1.6}
+.sigscreen .sfoot{display:flex;gap:10px;padding:0 12px 6px}
+.sigscreen .sfoot.statusrow{padding:6px 12px 0}
+.sigscreen .sfoot:last-child{padding-bottom:calc(12px + var(--safe-b))}
 .welcome{text-align:center;padding:30px 16px}
 .tlogo{width:72px;height:72px;border-radius:20px;background:var(--accent);color:#fff;font-size:38px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
 .dropzone{border:2px dashed var(--accent);border-radius:16px;padding:26px 16px;background:var(--accent-l);margin:16px 0}
@@ -266,7 +275,8 @@ function fileToBeleg(f,cb){
 }
 
 /* =================== ROOT RENDER =================== */
-function setTab(t){ui().tab=t;save();render();}
+let tabScroll={};
+function setTab(t){if(state&&state.ui)tabScroll[ui().tab]=window.scrollY;ui().tab=t;save();render();requestAnimationFrame(()=>window.scrollTo(0,tabScroll[t]||0));}
 function render(){
   const t=T();
   document.body.classList.toggle('notrip',!t);
@@ -324,8 +334,8 @@ function openNewTrip(){
 /* =================== IMPORT =================== */
 function viewImport(){
   const d=elFromHTML('<div></div>');
-  d.innerHTML='<div class="welcome"><div class="tlogo">📄</div><h2 style="margin:0 0 6px">'+esc(T().name)+'</h2><p class="muted" style="margin:0 0 4px">Importiere die Teilnehmerliste (PDF) von Feierreisen.</p><div class="dropzone"><div class="bold" style="margin-bottom:4px">Teilnehmerliste importieren</div><div class="small muted">PDF auswählen – Gäste & Buchungen werden automatisch erkannt.</div></div><button class="btn" id="wImport">📄 PDF importieren</button><button class="btn out" id="wDemo" style="margin-top:10px">Mit Beispieldaten füllen</button></div>';
-  d.querySelector('#wImport').onclick=()=>$('#pdfInput').click();d.querySelector('#wDemo').onclick=loadDemo;
+  d.innerHTML='<div class="welcome"><div class="tlogo">📄</div><h2 style="margin:0 0 6px">'+esc(T().name)+'</h2><p class="muted" style="margin:0 0 4px">Importiere die Teilnehmerliste (PDF) von Feierreisen — oder füge Teilnehmer manuell hinzu.</p><div class="dropzone"><div class="bold" style="margin-bottom:4px">Teilnehmerliste importieren</div><div class="small muted">PDF auswählen – Gäste & Buchungen werden automatisch erkannt.</div></div><button class="btn" id="wImport">📄 PDF importieren</button><button class="btn out" id="wAdd" style="margin-top:10px">＋ Teilnehmer manuell hinzufügen</button></div>';
+  d.querySelector('#wImport').onclick=()=>$('#pdfInput').click();d.querySelector('#wAdd').onclick=openAddParticipant;
   return d;
 }
 async function doImport(file){
@@ -350,7 +360,7 @@ async function doImport(file){
 }
 function loadDemo(){
   if(!T())return;
-  const raw=[['Anna Alpha',1,1],['Max Mustermann',0,1],['Bernd Beta',1,1],['Claus Carl-Heinz',1,1],['Dieter Drews',1,0],['Frank Finger',1,1]];
+  const raw=[['Max Mustermann',1,1],['Erika Beispiel',0,1],['Klaus Kunde',1,1],['Test Person',0,1],['Anna Anonym',1,0],['Ben Beispiel',0,0],['Carla Muster',1,1],['Demo Gast',0,1],['Felix Fiktiv',1,1],['Gina Generisch',1,1],['Hans Huber',1,0],['Ida Imaginär',1,1]];
   const parts=[],books=[];let bid=0,cur=null;
   raw.forEach((r,i)=>{const name=r[0],isB=r[1],paidGrp=r[2];if(isB){cur={id:++bid,bucher:name,handy:'017'+(60000000+i*111111),paid:!!paidGrp};books.push(cur);}
     parts.push({nr:i+1,name:name,handy:'017'+(60000000+i*111111),abfahrtsort:i%7===0?'Rheine':(i%5===0?'Bremen':'Hamburg'),ticket:i%5===0?'Premium':'REG',skat:'',sondergepaeck:i%3===0?'faltbarer Bollerwagen, Sporttasche':'',camp:i%2===0,kommentar:'',buchungId:cur.id,bucher:cur.bucher,istBucher:name===cur.bucher,bezahlt:cur.paid,anwesend:false,sitzplatz:'',signature:null,status:'',manuell:false});});
@@ -387,9 +397,9 @@ function viewTeilnehmer(){
 }
 function openAddParticipant(){
   const t=T();const n=elFromHTML('<div></div>');const segVal={camp:false,paid:false};
-  n.innerHTML='<h2>Teilnehmer hinzufügen</h2><div class="field"><label>Name *</label><input id="apName"></div><div class="field"><label>Handynummer</label><input id="apHandy" inputmode="tel" placeholder="z. B. 0176…"></div><div class="row" style="gap:8px"><div class="field" style="flex:1;margin:0"><label>Abfahrtsort</label><input id="apOrt" value="'+esc((t.participants[0]&&t.participants[0].abfahrtsort)||'')+'"></div><div class="field" style="flex:1;margin:0"><label>Ticket</label><input id="apTicket" placeholder="REG"></div></div><div class="field"><label>Sondergepäck</label><input id="apGep"></div><div class="row" style="gap:10px;margin-bottom:14px;align-items:stretch"><div style="flex:1"><label style="display:block;font-size:13px;color:var(--muted);margin-bottom:5px">Camping</label><div class="seg" id="apCampSeg"><button type="button" data-v="0" class="on">Nein</button><button type="button" data-v="1">Ja</button></div></div><div style="flex:1"><label style="display:block;font-size:13px;color:var(--muted);margin-bottom:5px">Bezahlt</label><div class="seg" id="apPaidSeg"><button type="button" data-v="0" class="on">Nein</button><button type="button" data-v="1">Ja</button></div></div></div><button class="btn" id="apSave">Hinzufügen</button>';
+  n.innerHTML='<h2>Teilnehmer hinzufügen</h2><div class="field"><label>Name *</label><input id="apName"></div><div class="field"><label>Handynummer</label><input id="apHandy" inputmode="tel" placeholder="z. B. 0176…"></div><div class="row" style="gap:8px"><div class="field" style="flex:1;margin:0"><label>Abfahrtsort</label><input id="apOrt" value="'+esc((t.participants[0]&&t.participants[0].abfahrtsort)||'')+'"></div><div class="field" style="flex:1;margin:0"><label>Ticket</label><input id="apTicket" placeholder="REG"></div></div><div class="field"><label>Sondergepäck</label><input id="apGep"></div><div class="field" style="margin-bottom:10px"><label>Camping</label><div class="seg" id="apCampSeg"><button type="button" data-v="0" class="on">Nein</button><button type="button" data-v="1">Ja</button></div></div><div class="field" style="margin-bottom:14px"><label>Bezahlt</label><div class="seg" id="apPaidSeg"><button type="button" data-v="0" class="on">Nein</button><button type="button" data-v="1">Ja</button></div></div><button class="btn" id="apSave">Hinzufügen</button>';
   const bg=openSheet(n);
-  const bindSeg=(sel,key)=>{const seg=n.querySelector(sel);seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{segVal[key]=b.dataset.v==='1';seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));});};
+  const bindSeg=(sel,key)=>{const seg=n.querySelector(sel);seg.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b||!seg.contains(b))return;ev.preventDefault();segVal[key]=b.dataset.v==='1';seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));});};
   bindSeg('#apCampSeg','camp');bindSeg('#apPaidSeg','paid');
   n.querySelector('#apSave').onclick=()=>{const name=n.querySelector('#apName').value.trim();if(!name){toast('Bitte Name eingeben');return;}
     const nr=t.participants.reduce((m,p)=>Math.max(m,p.nr||0),0)+1;const bid='m'+uid();const handy=n.querySelector('#apHandy').value.trim();
@@ -417,46 +427,72 @@ function pcard(p){
 }
 
 /* =================== SHEETS / PAGES =================== */
-function openSheet(innerNode){
+let _ovStack=[],_ignorePop=0;
+function _doClose(el){if(el._cleanup)el._cleanup();el.remove();if(el._after)el._after();}
+window.addEventListener('popstate',()=>{if(_ignorePop>0){_ignorePop--;return;}if(_ovStack.length){_doClose(_ovStack.pop());}});
+function _openOverlay(el,after,cleanup){el._after=after;el._cleanup=cleanup;document.body.appendChild(el);_ovStack.push(el);try{history.pushState({ov:_ovStack.length},'');}catch(e){}
+  el._close=()=>{const i=_ovStack.indexOf(el);if(i<0)return;_ovStack.splice(i,1);_doClose(el);_ignorePop++;try{history.back();}catch(e){_ignorePop--;}};return el;}
+function openSheet(innerNode,after){
   const bg=elFromHTML('<div class="sheet-bg"></div>');const sheet=elFromHTML('<div class="sheet"></div>');
   sheet.appendChild(elFromHTML('<div class="grab"></div>'));sheet.appendChild(innerNode);bg.appendChild(sheet);
-  bg.onclick=e=>{if(e.target===bg)close();};function close(){bg.remove();}bg._close=close;document.body.appendChild(bg);return bg;
+  _openOverlay(bg,after);bg.onclick=e=>{if(e.target===bg)bg._close();};return bg;
 }
 function openPage(title,innerNode){
   const pg=elFromHTML('<div class="page"></div>');
   pg.innerHTML='<div class="page-bar"><button class="pback">‹ Zurück</button><span class="ptitle">'+title+'</span></div><div class="page-body"></div>';
   pg.querySelector('.page-body').appendChild(innerNode);
-  function close(){pg.remove();render();}
-  pg.querySelector('.pback').onclick=close;pg._close=close;
-  document.body.appendChild(pg);pg.scrollTop=0;return pg;
+  _openOverlay(pg,render);pg.querySelector('.pback').onclick=()=>pg._close();pg.scrollTop=0;return pg;
+}
+function openSignaturePad(opts){
+  opts=opts||{};
+  const ov=elFromHTML('<div class="sigscreen"></div>');
+  ov.innerHTML='<div class="sbar"><button class="sx">✕ Abbrechen</button><span>'+esc(opts.title||'Unterschrift')+'</span><span style="width:64px"></span></div>'+(opts.statusButtons?('<div class="sfoot statusrow">'+opts.statusButtons.map((b,i)=>'<button class="btn sec sb'+i+'" style="flex:1">'+b.label+'</button>').join('')+'</div>'):'')+'<div class="scanvas"><canvas></canvas><div class="sph">Hier mit dem Finger unterschreiben.<br>Tipp: Handy quer drehen für mehr Platz.</div></div><div class="sfoot"><button class="btn sec" id="sigClr" style="flex:1">Löschen</button><button class="btn" id="sigOk" style="flex:2">OK</button></div>';
+  const canvas=ov.querySelector('canvas');const ph=ov.querySelector('.sph');const ctx=canvas.getContext('2d');
+  let strokes=[],cur=null,drawing=false;
+  const rectOf=()=>canvas.getBoundingClientRect();
+  function redraw(){const r=rectOf();const dpr=window.devicePixelRatio||1;canvas.width=Math.max(1,Math.round(r.width*dpr));canvas.height=Math.max(1,Math.round(r.height*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,r.width,r.height);ctx.lineWidth=2.8;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#10243b';strokes.forEach(s=>{ctx.beginPath();s.forEach((p,i)=>{const x=p.x*r.width,y=p.y*r.height;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();});ph.style.display=strokes.length?'none':'';}
+  const norm=e=>{const r=rectOf();const t=e.touches?e.touches[0]:e;return {x:(t.clientX-r.left)/r.width,y:(t.clientY-r.top)/r.height};};
+  const start=e=>{e.preventDefault();drawing=true;cur=[norm(e)];strokes.push(cur);redraw();};
+  const move=e=>{if(!drawing)return;e.preventDefault();cur.push(norm(e));redraw();};
+  const end=()=>{drawing=false;};
+  canvas.addEventListener('touchstart',start,{passive:false});canvas.addEventListener('touchmove',move,{passive:false});canvas.addEventListener('touchend',end);
+  canvas.addEventListener('mousedown',start);canvas.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
+  const onResize=()=>redraw();window.addEventListener('resize',onResize);window.addEventListener('orientationchange',onResize);
+  _openOverlay(ov,null,()=>{window.removeEventListener('resize',onResize);window.removeEventListener('orientationchange',onResize);window.removeEventListener('mouseup',end);});
+  setTimeout(redraw,40);
+  ov.querySelector('.sx').onclick=()=>ov._close();
+  ov.querySelector('#sigClr').onclick=()=>{strokes=[];redraw();};
+  ov.querySelector('#sigOk').onclick=()=>{if(!strokes.length){toast('Bitte zuerst unterschreiben');return;}const r=rectOf();const ow=640;const oh=Math.min(900,Math.max(150,Math.round(ow*r.height/r.width)));const out=document.createElement('canvas');out.width=ow;out.height=oh;const o=out.getContext('2d');o.lineWidth=3;o.lineCap='round';o.lineJoin='round';o.strokeStyle='#10243b';strokes.forEach(s=>{o.beginPath();s.forEach((p,i)=>{const x=p.x*ow,y=p.y*oh;i?o.lineTo(x,y):o.moveTo(x,y);});o.stroke();});const data=out.toDataURL('image/png');ov._close();opts.onSave&&opts.onSave(data);};
+  if(opts.statusButtons)opts.statusButtons.forEach((b,i)=>{ov.querySelector('.sb'+i).onclick=()=>{ov._close();b.onClick();};});
+  return ov;
 }
 function openCheckin(p){
-  const n=elFromHTML('<div></div>');
-  n.innerHTML='<h2>Einchecken · '+esc(p.name)+'</h2><div class="note ok" style="margin-bottom:12px">Unterschreiben lassen — oder unten als abgemeldet / nicht angetreten markieren.</div><div class="tiny muted" style="margin:0 0 10px">Nr '+p.nr+(p.bucher&&!p.istBucher?(' · gebucht von '+esc(p.bucher)):'')+(p.sitzplatz?(' · Sitz '+esc(p.sitzplatz)):'')+'</div><div id="sigArea"></div><div class="sectitle" style="margin-top:16px">Stattdessen markieren</div><div class="row" style="gap:8px"><button class="btn sec" id="ciAbg" style="flex:1">🚫 Abgemeldet</button><button class="btn sec" id="ciNa" style="flex:1">🚷 Nicht angetreten</button></div>';
-  const bg=openSheet(n);
-  renderSig(n.querySelector('#sigArea'),p,{checkin:true,onSaved:()=>{p.status='';save();bg._close();render();toast(p.name+' eingecheckt ✓');}});
-  const mark=(s,label)=>{p.status=s;p.anwesend=false;save();bg._close();render();toast(p.name+' als '+label+' markiert');};
-  const bA=n.querySelector('#ciAbg'),bN=n.querySelector('#ciNa');
-  bA.onclick=()=>mark('abgemeldet','abgemeldet');bN.onclick=()=>mark('nicht_angetreten','nicht angetreten');
-  if(p.status==='abgemeldet'){bA.style.border='1.5px solid var(--accent)';bA.style.color='var(--accent)';bA.textContent='✓ Abgemeldet';}
-  if(p.status==='nicht_angetreten'){bN.style.border='1.5px solid var(--accent)';bN.style.color='var(--accent)';bN.textContent='✓ Nicht angetreten';}
+  openSignaturePad({title:'Einchecken · '+p.name,
+    onSave:data=>{p.signature=data;p.anwesend=true;p.status='';save();render();toast(p.name+' eingecheckt ✓');},
+    statusButtons:[
+      {label:'🚫 Abgemeldet',onClick:()=>{p.status='abgemeldet';p.anwesend=false;save();render();toast(p.name+' als abgemeldet markiert');}},
+      {label:'🚷 Nicht angetreten',onClick:()=>{p.status='nicht_angetreten';p.anwesend=false;save();render();toast(p.name+' als nicht angetreten markiert');}}
+    ]});
 }
 function openDetail(p){
   const b=bookingOf(p);
   const n=elFromHTML('<div></div>');
   n.innerHTML='<div class="card" style="padding:4px 14px;margin-bottom:14px"><div class="kv"><span class="k">Handy</span><span>'+(p.handy?'<a class="linkbtn" href="'+telHref(p.handy)+'">'+esc(p.handy)+'</a>':'—')+'</span></div><div class="kv"><span class="k">Abfahrtsort</span><span>'+esc(p.abfahrtsort||'—')+'</span></div><div class="kv"><span class="k">Ticket</span><span>'+esc(p.ticket||'—')+'</span></div><div class="kv"><span class="k">Camping</span><span>'+(p.camp?'Ja 🏕':'Nein')+'</span></div><div class="kv"><span class="k">Sondergepäck</span><span>'+esc(p.sondergepaeck||'—')+'</span></div><div class="kv"><span class="k">Bucher</span><span>'+esc(p.bucher||'—')+(p.istBucher?' (selbst)':'')+'</span></div><div class="kv"><span class="k">Zahlung (ganze Buchung)</span><span><button class="linkbtn" id="togPay">'+(p.bezahlt?'✓ Bezahlt':'⚠️ Offen – tippen')+'</button></span></div></div>'+
     (!p.bezahlt&&b&&b.handy?('<a class="btn out" href="'+telHref(b.handy)+'" style="margin-bottom:14px">💶 Bucher '+esc(p.bucher)+' anrufen (Geld)</a>'):'')+
-    '<div class="row" style="gap:8px;margin-bottom:14px"><a class="btn sec" style="flex:1" href="'+telHref(p.handy)+'">📞 Anrufen</a>'+(normPhone(p.handy)?'<a class="btn sec" style="flex:1" href="'+waHref(p.handy,'')+'" target="_blank" rel="noopener">💬 WhatsApp</a>':'')+'</div><div class="field"><label>Sitzplatz-Nr.</label><input id="seatInp" inputmode="numeric" placeholder="z. B. 14" value="'+esc(p.sitzplatz)+'"></div><div class="field"><label>Kommentar</label><textarea id="cmtInp" placeholder="Notiz …">'+esc(p.kommentar||'')+'</textarea></div><div class="sectitle">✍︎ Unterschrift / Check-in</div><div id="sigArea"></div><button class="btn" id="checkInBtn" style="margin-top:14px"></button><div class="sectitle">Status</div><div class="seg" id="statusSeg"><button data-s="">Aktiv</button><button data-s="abgemeldet">Abgemeldet</button><button data-s="nicht_angetreten">Nicht angetr.</button></div><button class="btn sec" id="rmP" style="margin-top:18px;color:var(--danger)">🗑 Teilnehmer entfernen</button>';
+    '<div class="row" style="gap:8px;margin-bottom:14px"><a class="btn sec" style="flex:1" href="'+telHref(p.handy)+'">📞 Anrufen</a>'+(normPhone(p.handy)?'<a class="btn sec" style="flex:1" href="'+waHref(p.handy,'')+'" target="_blank" rel="noopener">💬 WhatsApp</a>':'')+'</div><div class="field"><label>Sitzplatz-Nr.</label><input id="seatInp" inputmode="numeric" placeholder="z. B. 14" value="'+esc(p.sitzplatz)+'"></div><div class="field"><label>Kommentar</label><textarea id="cmtInp" placeholder="Notiz …">'+esc(p.kommentar||'')+'</textarea></div><div class="sectitle">✍︎ Unterschrift / Check-in</div><div id="sigThumb"></div><button class="btn out" id="sigBtn" style="margin-top:6px">✍︎ Unterschrift erfassen</button><button class="btn" id="checkInBtn" style="margin-top:10px"></button><div class="sectitle">Status</div><div class="seg" id="statusSeg"><button data-s="">Aktiv</button><button data-s="abgemeldet">Abgemeldet</button><button data-s="nicht_angetreten">Nicht angetr.</button></div><button class="btn sec" id="rmP" style="margin-top:18px;color:var(--danger)">🗑 Teilnehmer entfernen</button>';
   const pg=openPage(esc(p.name)+' · Nr '+p.nr,n);
   const refreshBtn=()=>{const btn=n.querySelector('#checkInBtn');
     if(p.anwesend){btn.textContent='✓ Eingecheckt – zurücknehmen';btn.disabled=false;btn.className='btn sec';}
     else if(p.signature){btn.textContent='Einchecken';btn.disabled=false;btn.className='btn';}
     else{btn.textContent='Zum Einchecken bitte unterschreiben';btn.disabled=true;btn.className='btn';}};
-  n.querySelector('#togPay').onclick=()=>{togglePay(p);pg._close();openDetail(p);};
+  n.querySelector('#togPay').onclick=function(){togglePay(p);this.textContent=p.bezahlt?'✓ Bezahlt':'⚠️ Offen – tippen';};
   n.querySelector('#seatInp').oninput=e=>{p.sitzplatz=e.target.value.trim();save();};
   n.querySelector('#cmtInp').oninput=e=>{p.kommentar=e.target.value;save();};
   n.querySelector('#checkInBtn').onclick=()=>{if(p.anwesend){p.anwesend=false;}else{if(!p.signature){toast('Bitte zuerst unterschreiben');return;}p.anwesend=true;}save();pg._close();toast(p.anwesend?p.name+' eingecheckt ✓':'ausgecheckt');};
-  renderSig(n.querySelector('#sigArea'),p,{onSaved:refreshBtn});refreshBtn();
+  const sigThumb=n.querySelector('#sigThumb');
+  const refreshSig=()=>{sigThumb.innerHTML=p.signature?('<div class="sigsaved" style="margin-bottom:0"><img src="'+p.signature+'" alt="Unterschrift"></div>'):'';refreshBtn();};
+  n.querySelector('#sigBtn').onclick=()=>openSignaturePad({title:p.name,onSave:data=>{p.signature=data;save();refreshSig();render();}});
+  refreshSig();
   const seg=n.querySelector('#statusSeg');const updSeg=()=>seg.querySelectorAll('button').forEach(bx=>bx.classList.toggle('on',(bx.dataset.s||'')===(p.status||'')));seg.querySelectorAll('button').forEach(bx=>bx.onclick=()=>{p.status=bx.dataset.s;save();updSeg();});updSeg();
   n.querySelector('#rmP').onclick=()=>{if(confirm('„'+p.name+'" wirklich aus der Liste entfernen?')){const arr=T().participants;const ix=arr.indexOf(p);if(ix>=0)arr.splice(ix,1);if(p.buchungId&&!arr.some(x=>x.buchungId===p.buchungId))T().bookings=T().bookings.filter(b=>b.id!==p.buchungId);save();pg._close();toast('Teilnehmer entfernt');}};
 }
@@ -763,7 +799,7 @@ async function generatePDF(){
     else{doc3=await PDFDocument.load(fbDoc('ein'));}
     await withReceipts(doc3,f.einnahmen.items,'Einnahme');
     const files=[new File([await doc1.save()],nameCL,{type:'application/pdf'}),new File([await doc2.save()],nameAus,{type:'application/pdf'}),new File([await doc3.save()],nameEin,{type:'application/pdf'})];
-    if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,title:(t.name||'Fahrt'),text:'Abschluss '+(t.name||'Fahrt')+' – 3 Dateien'});toast('3 Dateien geteilt ✓');return;}catch(e){if(e&&e.name==='AbortError')return;}}
+    if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files});toast('3 Dateien geteilt ✓');return;}catch(e){if(e&&e.name==='AbortError')return;}}
     for(const fo of files){const url=URL.createObjectURL(fo);const a=document.createElement('a');a.href=url;a.download=fo.name;document.body.appendChild(a);a.click();a.remove();await new Promise(r=>setTimeout(r,500));setTimeout(()=>URL.revokeObjectURL(url),6000);}
     toast('3 PDFs gespeichert – in Files alle 3 wählen → Teilen → WeTransfer');
   }catch(err){console.error(err);toast('Fehler beim Erstellen der PDFs');}
