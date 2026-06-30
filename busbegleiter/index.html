@@ -99,8 +99,8 @@ input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{b
 .sigscreen{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column}
 .sigscreen .sbar{background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(9px + var(--safe-t)) 12px 9px;font-weight:600;font-size:16px}
 .sigscreen .sbar button{color:#fff;font-weight:600}
-.sigscreen .scanvas{flex:1;margin:10px;border:1px solid var(--line);border-radius:12px;background:#fff;position:relative;touch-action:none;overflow:hidden}
-.sigscreen .scanvas canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.sigscreen .scanvas{flex:1;margin:10px;position:relative;touch-action:none;overflow:hidden}
+.sigscreen .scanvas canvas{position:absolute;display:block;background:#fff;border:1px solid var(--line);border-radius:10px;touch-action:none}
 .sigscreen .sph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#bbb;pointer-events:none;font-size:15px;text-align:center;padding:20px;line-height:1.6}
 .sigscreen .sfoot{display:flex;gap:10px;padding:0 12px 6px}
 .sigscreen .sfoot.statusrow{padding:6px 12px 0}
@@ -145,6 +145,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
   <button data-tab="teilnehmer" class="on"><span class="ti">👤</span>Teilnehmer</button>
   <button data-tab="sitz"><span class="ti">💺</span>Sitzplätze</button>
   <button data-tab="formulare"><span class="ti">📋</span>Formulare</button>
+  <button data-tab="bericht"><span class="ti">📝</span>Bericht</button>
   <button data-tab="abschluss"><span class="ti">📤</span>Abschluss</button>
 </nav>
 <div class="toast" id="toast"></div>
@@ -212,8 +213,8 @@ function parseTeilnehmer(pages){
 
 /* =================== STATE + IndexedDB =================== */
 const uid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4);
-const blankForms=()=>({auslagen:{items:[]},einnahmen:{bar:false,items:[]},noshows:[],tickets:{uebrig:false,uebrigAnzahl:'',weitergeben:false,weiterAn:''},checkHin:{},checkRueck:{},bemerkungen:'',namensaenderungen:[],neubucher:[],aenderungen:[]});
-function newTrip(name,bus,datum){return {id:uid(),name:name||'Neue Fahrt',busNr:bus||'',datum:datum||'',groupInvite:'',createdAt:new Date().toISOString(),importedAt:'',pdfData:null,pdfName:'',participants:[],bookings:[],forms:blankForms()};}
+const blankForms=()=>({auslagen:{items:[]},einnahmen:{bar:false,items:[]},noshows:[],tickets:{uebrig:false,uebrigAnzahl:'',weitergeben:false,weiterAn:''},checkHin:{},checkRueck:{},checkSig:{},bemerkungen:'',namensaenderungen:[],neubucher:[],aenderungen:[]});
+function newTrip(name,bus,datum){return {id:uid(),name:name||'Neue Fahrt',busNr:bus||'',datum:datum||'',groupInvite:'',tourbericht:'',createdAt:new Date().toISOString(),importedAt:'',pdfData:null,pdfName:'',participants:[],bookings:[],forms:blankForms()};}
 function defaults(){return {trips:[],activeId:null,settings:{betreuer:'',konto:{inhaber:'',iban:'',bank:''},waTemplate:'Moin! Hier der Link zur WhatsApp-Gruppe für unsere Fahrt: {invite}'},ui:{tab:'teilnehmer',filter:'alle',search:'',sortBy:'nr',seatSearch:''}};}
 let state=null;
 const IDB_OK=(typeof indexedDB!=='undefined'&&indexedDB);
@@ -240,7 +241,7 @@ function normalize(s){
   if(s.settings.waTemplate==null)s.settings.waTemplate=defaults().settings.waTemplate;
   delete s.settings.groupInvite;s.ui=s.ui||defaults().ui;
   (s.trips||[]).forEach(t=>{if(t.groupInvite==null)t.groupInvite='';if(t.pdfData===undefined)t.pdfData=null;
-    if(!t.forms)t.forms=blankForms();if(!t.forms.auslagen)t.forms.auslagen={items:[]};if(!t.forms.aenderungen)t.forms.aenderungen=[];
+    if(!t.forms)t.forms=blankForms();if(!t.forms.auslagen)t.forms.auslagen={items:[]};if(!t.forms.aenderungen)t.forms.aenderungen=[];if(!t.forms.checkSig)t.forms.checkSig={};if(t.tourbericht===undefined)t.tourbericht='';
     if(t.forms.auslagen.kontoinhaber&&!s.settings.konto.inhaber){s.settings.konto={inhaber:t.forms.auslagen.kontoinhaber||'',iban:t.forms.auslagen.iban||'',bank:t.forms.auslagen.bank||''};}
     t.participants=t.participants||[];t.participants.forEach(p=>{if(p.status===undefined)p.status='';});t.bookings=t.bookings||[];});
   return s;
@@ -290,10 +291,11 @@ function render(){
   updateTabBadges();
   const m=$('#main');m.innerHTML='';
   if(!t){m.appendChild(viewTripList());return;}
-  if(!t.participants.length && ui().tab!=='formulare' && ui().tab!=='abschluss'){m.appendChild(viewImport());return;}
+  if(!t.participants.length && ui().tab!=='formulare' && ui().tab!=='abschluss' && ui().tab!=='bericht'){m.appendChild(viewImport());return;}
   if(ui().tab==='teilnehmer')m.appendChild(viewTeilnehmer());
   else if(ui().tab==='sitz')m.appendChild(viewSitz());
   else if(ui().tab==='formulare')m.appendChild(viewFormulare());
+  else if(ui().tab==='bericht')m.appendChild(viewBericht());
   else if(ui().tab==='abschluss')m.appendChild(viewAbschluss());
 }
 function updateTabBadges(){
@@ -450,7 +452,8 @@ function openSignaturePad(opts){
   const canvas=ov.querySelector('canvas');const ph=ov.querySelector('.sph');const ctx=canvas.getContext('2d');
   let strokes=[],cur=null,drawing=false;
   const rectOf=()=>canvas.getBoundingClientRect();
-  function redraw(){const r=rectOf();const dpr=window.devicePixelRatio||1;canvas.width=Math.max(1,Math.round(r.width*dpr));canvas.height=Math.max(1,Math.round(r.height*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,r.width,r.height);ctx.lineWidth=2.8;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#10243b';strokes.forEach(s=>{ctx.beginPath();s.forEach((p,i)=>{const x=p.x*r.width,y=p.y*r.height;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();});ph.style.display=strokes.length?'none':'';}
+  function fit(){const c=canvas.parentNode.getBoundingClientRect();const AR=2.5;let w=Math.max(40,c.width-4),h=w/AR;if(h>c.height-4){h=Math.max(40,c.height-4);w=h*AR;}canvas.style.width=w+'px';canvas.style.height=h+'px';canvas.style.left=Math.round((c.width-w)/2)+'px';canvas.style.top=Math.round((c.height-h)/2)+'px';}
+  function redraw(){fit();const r=rectOf();const dpr=window.devicePixelRatio||1;canvas.width=Math.max(1,Math.round(r.width*dpr));canvas.height=Math.max(1,Math.round(r.height*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,r.width,r.height);ctx.lineWidth=2.8;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#10243b';strokes.forEach(s=>{ctx.beginPath();s.forEach((p,i)=>{const x=p.x*r.width,y=p.y*r.height;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();});ph.style.display=strokes.length?'none':'';}
   const norm=e=>{const r=rectOf();const t=e.touches?e.touches[0]:e;return {x:(t.clientX-r.left)/r.width,y:(t.clientY-r.top)/r.height};};
   const start=e=>{e.preventDefault();drawing=true;cur=[norm(e)];strokes.push(cur);redraw();};
   const move=e=>{if(!drawing)return;e.preventDefault();cur.push(norm(e));redraw();};
@@ -467,12 +470,12 @@ function openSignaturePad(opts){
   return ov;
 }
 function openCheckin(p){
-  openSignaturePad({title:'Einchecken · '+p.name,
-    onSave:data=>{p.signature=data;p.anwesend=true;p.status='';save();render();toast(p.name+' eingecheckt ✓');},
-    statusButtons:[
-      {label:'🚫 Abgemeldet',onClick:()=>{p.status='abgemeldet';p.anwesend=false;save();render();toast(p.name+' als abgemeldet markiert');}},
-      {label:'🚷 Nicht angetreten',onClick:()=>{p.status='nicht_angetreten';p.anwesend=false;save();render();toast(p.name+' als nicht angetreten markiert');}}
-    ]});
+  const n=elFromHTML('<div></div>');
+  n.innerHTML='<h2>Einchecken · '+esc(p.name)+'</h2><div class="tiny muted" style="margin:0 0 14px">Nr '+p.nr+(p.bucher&&!p.istBucher?(' · gebucht von '+esc(p.bucher)):'')+(p.sitzplatz?(' · Sitz '+esc(p.sitzplatz)):'')+'</div><button class="btn" id="ciSign" style="margin-bottom:10px">✍︎ Unterschrift erfassen</button><button class="btn sec" id="ciAbg" style="margin-bottom:10px">🚫 Abgemeldet</button><button class="btn sec" id="ciNa">🚷 Nicht angetreten</button>';
+  const bg=openSheet(n);
+  n.querySelector('#ciSign').onclick=()=>{bg._close();openSignaturePad({title:'Unterschrift · '+p.name,onSave:data=>{p.signature=data;p.anwesend=true;p.status='';save();render();toast(p.name+' eingecheckt ✓');}});};
+  n.querySelector('#ciAbg').onclick=()=>{p.status='abgemeldet';p.anwesend=false;save();bg._close();render();toast(p.name+' als abgemeldet markiert');};
+  n.querySelector('#ciNa').onclick=()=>{p.status='nicht_angetreten';p.anwesend=false;save();bg._close();render();toast(p.name+' als nicht angetreten markiert');};
 }
 function openDetail(p){
   const b=bookingOf(p);
@@ -559,11 +562,12 @@ function viewFormulare(){
   const t=T();const d=elFromHTML('<div></div>');
   d.appendChild(elFromHTML('<div class="card" style="padding:12px 14px;margin-bottom:14px"><div class="field" style="margin-bottom:8px"><label>Event / Bustour</label><input id="mEvent" value="'+esc(t.name)+'"></div><div class="row" style="gap:8px"><div class="field" style="flex:1;margin:0"><label>Bus-Nr.</label><input id="mBus" value="'+esc(t.busNr)+'"></div><div class="field" style="flex:1;margin:0"><label>Datum</label><input id="mDate" type="date" value="'+esc(t.datum)+'"></div></div></div>'));
   const sec=(title,fn)=>{const c=elFromHTML('<div class="card" style="margin-bottom:10px;padding:14px"></div>');c.appendChild(elFromHTML('<div class="bold" style="margin-bottom:12px;font-size:15px">'+title+'</div>'));c.appendChild(fn());d.appendChild(c);};
+  const nav=(title,fn)=>{const c=elFromHTML('<button class="card" style="display:flex;width:100%;justify-content:space-between;align-items:center;padding:16px 14px;margin-bottom:10px;text-align:left;font-size:15px"><span class="bold">'+title+' ›</span><span style="color:var(--muted)">öffnen</span></button>');c.onclick=()=>openPage(title,fn());d.appendChild(c);};
   sec('💶 Auslagenerstattung',renderAuslagen);
   sec('🧾 Einnahmebeleg',renderEinnahmen);
   sec('🚷 No-Shows (nicht erschienen)',renderNoshows);
   sec('🎟 Tickets übrig / weitergeben',renderTickets);
-  sec('🚌 Bus-Checkliste',renderCheck);
+  nav('🚌 Bus-Checkliste',renderCheck);
   sec('✏️ Namensänderungen / Neubucher',renderNamen);
   d.querySelector('#mEvent').oninput=e=>{t.name=e.target.value;save();$('#hdrTitle').textContent=t.name||'Feierreisen Busbegleiter';};
   d.querySelector('#mBus').oninput=e=>{t.busNr=e.target.value;save();};
@@ -618,7 +622,20 @@ const CHECK_RUECK=['Pünktlichkeit bei Abfahrt','Zustand Bus innen bei Rückkunf
 function renderCheck(){const d=elFromHTML('<div></div>');const auto=(T().name||'')+' - '+busTagOf(T());
   const block=(title,arr,store)=>{const w=elFromHTML('<div></div>');w.innerHTML='<div class="sectitle">'+title+'</div>';arr.forEach(label=>{const fld=elFromHTML('<div class="field"><label>'+esc(label)+'</label><input></div>');const inp=fld.querySelector('input');inp.maxLength=40;inp.value=store[label]||(label==='Eventname und Busnummer'?auto:'');if(label==='Eventname und Busnummer')inp.placeholder=auto;const cnt=elFromHTML('<div class="tiny muted" style="text-align:right;margin-top:2px"></div>');const upd=()=>{cnt.textContent=inp.value.length+'/40';cnt.style.color=inp.value.length>=40?'var(--danger)':'var(--muted)';};inp.oninput=e=>{store[label]=e.target.value;save();upd();};upd();fld.appendChild(cnt);w.appendChild(fld);});return w;};
   d.appendChild(block('Hinfahrt',CHECK_HIN,T().forms.checkHin));d.appendChild(block('Rückfahrt',CHECK_RUECK,T().forms.checkRueck));
-  const bem=elFromHTML('<div class="field"><label>Bemerkungen, Vorkommnisse, Probleme (3 Zeilen)</label><textarea maxlength="210"></textarea><div class="tiny muted bemcnt" style="text-align:right;margin-top:2px"></div></div>');const bta=bem.querySelector('textarea');bta.value=T().forms.bemerkungen||'';const bc=bem.querySelector('.bemcnt');const bupd=()=>{bc.textContent=bta.value.length+'/210';bc.style.color=bta.value.length>=210?'var(--danger)':'var(--muted)';};bta.oninput=e=>{T().forms.bemerkungen=e.target.value;save();bupd();};bupd();d.appendChild(bem);return d;}
+  const bem=elFromHTML('<div class="field"><label>Bemerkungen, Vorkommnisse, Probleme (3 Zeilen)</label><textarea maxlength="210"></textarea><div class="tiny muted bemcnt" style="text-align:right;margin-top:2px"></div></div>');const bta=bem.querySelector('textarea');bta.value=T().forms.bemerkungen||'';const bc=bem.querySelector('.bemcnt');const bupd=()=>{bc.textContent=bta.value.length+'/210';bc.style.color=bta.value.length>=210?'var(--danger)':'var(--muted)';};bta.oninput=e=>{T().forms.bemerkungen=e.target.value;save();bupd();};bupd();d.appendChild(bem);
+  const cs=T().forms.checkSig;
+  const sigRow=(label,key)=>{const wrap=elFromHTML('<div class="field" style="margin-bottom:8px"></div>');const upd=()=>{wrap.innerHTML='<label>'+label+'</label>'+(cs[key]?'<div class="sigsaved" style="margin-bottom:6px"><img src="'+cs[key]+'" alt="Unterschrift"></div>':'');const btn=elFromHTML('<button class="btn out">✍︎ '+(cs[key]?'neu unterschreiben':'unterschreiben')+'</button>');btn.onclick=()=>openSignaturePad({title:label,onSave:data=>{cs[key]=data;save();upd();}});wrap.appendChild(btn);};upd();return wrap;};
+  d.appendChild(elFromHTML('<div class="sectitle">✍︎ Unterschriften</div>'));
+  d.appendChild(elFromHTML('<div class="tiny muted" style="margin:0 0 6px">Hinfahrt</div>'));
+  d.appendChild(sigRow('Busbegleiter (Hinfahrt)','hinBegleiter'));d.appendChild(sigRow('Busfahrer (Hinfahrt)','hinFahrer'));
+  d.appendChild(elFromHTML('<div class="tiny muted" style="margin:10px 0 6px">Rückfahrt</div>'));
+  d.appendChild(sigRow('Busbegleiter (Rückfahrt)','rueckBegleiter'));d.appendChild(sigRow('Busfahrer (Rückfahrt)','rueckFahrer'));
+  return d;}
+function viewBericht(){const t=T();const d=elFromHTML('<div></div>');
+  d.innerHTML='<div class="card" style="padding:14px"><div class="bold" style="margin-bottom:4px">📝 Tourbericht</div><p class="tiny muted" style="margin:0 0 10px">Dein Log zur Fahrt – Ablauf, Vorkommnisse, Notizen. <b>Kommt NICHT ins PDF</b> – kopiere ihn am Ende und füge ihn separat ein (z. B. in die WeTransfer-Notiz).</p><textarea id="tbArea" style="min-height:52vh;resize:vertical" placeholder="Hier deinen Tourbericht schreiben …"></textarea><button class="btn" id="tbCopy" style="margin-top:10px">📋 Bericht kopieren</button></div>';
+  const ta=d.querySelector('#tbArea');ta.value=t.tourbericht||'';ta.oninput=e=>{t.tourbericht=e.target.value;save();};
+  d.querySelector('#tbCopy').onclick=()=>{const txt=t.tourbericht||'';if(!txt.trim()){toast('Noch kein Bericht zum Kopieren');return;}const ok=()=>toast('Bericht kopiert ✓');const fb=()=>{try{const x=document.createElement('textarea');x.value=txt;x.style.position='fixed';x.style.opacity='0';document.body.appendChild(x);x.focus();x.select();document.execCommand('copy');x.remove();ok();}catch(e){toast('Kopieren nicht möglich – bitte Text markieren');}};if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fb);else fb();};
+  return d;}
 function renderNamen(){const f=T().forms;const d=elFromHTML('<div></div>');
   d.appendChild(elFromHTML('<p class="tiny muted">Pro Eintrag: links der <b>alte Bucher</b> (Name, TN-Nr., Handy), rechts die Daten des <b>neuen Gastes</b>. 5,00 € pro Änderung.</p>'));
   const list=elFromHTML('<div></div>');
@@ -786,8 +803,12 @@ async function generatePDF(){
     let doc1;
     if(t.pdfData){doc1=await PDFDocument.load(b64ToBytes(t.pdfData));await stampList(doc1);}
     else{doc1=await PDFDocument.load(tableDoc());}
-    if(formDoc){const cf=await doc1.embedFont(StandardFonts.Helvetica);stampCheckliste(await copyFormPage(doc1,2),cf);if(f.aenderungen&&f.aenderungen.length)stampNamen(await copyFormPage(doc1,3),cf);}
+    if(formDoc){const cf=await doc1.embedFont(StandardFonts.Helvetica);const clp=await copyFormPage(doc1,2);stampCheckliste(clp,cf);
+      const SIGL={hinBegleiter:[178,304,311],hinFahrer:[314,385,311],rueckBegleiter:[178,304,442],rueckFahrer:[313,385,442]};
+      for(const kk in SIGL){const sd=(f.checkSig||{})[kk];if(!sd)continue;const x0=SIGL[kk][0],x1=SIGL[kk][1],top=SIGL[kk][2];try{const sp=await doc1.embedPng(sd);const maxH=18,maxW=(x1-x0)-4;let hh=maxH,ww=(sp.width/sp.height)*hh;if(ww>maxW){ww=maxW;hh=(sp.height/sp.width)*ww;}clp.drawImage(sp,{x:x0+2,y:clp.getHeight()-(top+9)+1,width:ww,height:hh});}catch(e){}}
+      if(f.aenderungen&&f.aenderungen.length)stampNamen(await copyFormPage(doc1,3),cf);}
     else{const cb=await PDFDocument.load(fbDoc('check'));const cp=await doc1.copyPages(cb,cb.getPageIndices());cp.forEach(pg=>doc1.addPage(pg));}
+    /* Tourbericht bewusst NICHT im PDF – wird separat per Copy & Paste verschickt (z. B. WeTransfer-Notiz). */
     // FILE 2: Auslagen
     let doc2;
     if(formDoc){doc2=await PDFDocument.create();const fa=await doc2.embedFont(StandardFonts.Helvetica);const fab=await doc2.embedFont(StandardFonts.HelveticaBold);stampAuslagen(await copyFormPage(doc2,0),fa,fab);}
