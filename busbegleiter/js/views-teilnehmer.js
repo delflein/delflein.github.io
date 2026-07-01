@@ -22,11 +22,14 @@ function matchSearch(p, q) {
   return p.name.toLowerCase().includes(q) || String(p.nr) === q || String(p.nr).padStart(2, '0') === q || (p.handy || '').includes(q) || (p.bucher || '').toLowerCase().includes(q);
 }
 
+/** An Bord – je nach aktivem Fahrt-Abschnitt (Hin-/Rückfahrt). */
+const aboard = p => (ui().leg === 'rueck') ? !!p.rueckAnwesend : p.anwesend;
+
 /** Passt ein Teilnehmer zum aktiven Filter? */
 function passFilter(p, f) {
   if (f === 'alle') return true;
-  if (f === 'anwesend') return p.anwesend;
-  if (f === 'fehlt') return !p.anwesend;
+  if (f === 'anwesend') return aboard(p);
+  if (f === 'fehlt') return !aboard(p);
   if (f === 'offen') return !p.bezahlt;
   if (f === 'camp') return p.camp;
   if (f === 'gepaeck') return !!p.sondergepaeck;
@@ -46,9 +49,9 @@ function sortParts(arr) {
 export function viewTeilnehmer() {
   const d = elFromHTML('<div></div>');
   const ps = T().participants;
-  const present = ps.filter(p => p.anwesend).length;
+  const present = ps.filter(aboard).length;
   const filters = [
-    ['alle', 'Alle', ps.length], ['fehlt', 'Fehlt', ps.filter(p => !p.anwesend).length], ['anwesend', 'An Bord', present],
+    ['alle', 'Alle', ps.length], ['fehlt', 'Fehlt', ps.filter(p => !aboard(p)).length], ['anwesend', 'An Bord', present],
     ['offen', 'Offen 💶', ps.filter(p => !p.bezahlt).length], ['camp', 'Camping', ps.filter(p => p.camp).length], ['gepaeck', 'Sondergepäck', ps.filter(p => p.sondergepaeck).length],
   ];
   const nAbg = ps.filter(p => p.status === 'abgemeldet').length, nNa = ps.filter(p => p.status === 'nicht_angetreten').length;
@@ -56,7 +59,10 @@ export function viewTeilnehmer() {
   if (nNa) filters.push(['nichtangetreten', '🚷 Nicht angetreten', nNa]);
   const orte = [...new Set(ps.map(p => p.abfahrtsort).filter(Boolean))].sort();
 
-  let html = '<div class="search"><span class="ic">🔎</span><input id="srch" placeholder="Name, Nummer, Handy oder Bucher …" value="' + esc(ui().search) + '" autocomplete="off"></div>';
+  // Hin-/Rückfahrt-Umschalter: die Rückfahrt wird separat abgehakt (Issue #7),
+  // beeinflusst den Hinfahrt-Status nicht und landet nirgends im PDF.
+  let html = '<div class="seg" id="legSeg" style="margin-bottom:10px"><button data-l="hin"' + (ui().leg !== 'rueck' ? ' class="on"' : '') + '>🚌 Hinfahrt</button><button data-l="rueck"' + (ui().leg === 'rueck' ? ' class="on"' : '') + '>🔁 Rückfahrt</button></div>';
+  html += '<div class="search"><span class="ic">🔎</span><input id="srch" placeholder="Name, Nummer, Handy oder Bucher …" value="' + esc(ui().search) + '" autocomplete="off"></div>';
   html += '<div class="chips">' + filters.map(f => '<button class="chip' + (ui().filter === f[0] ? ' on' : '') + '" data-f="' + f[0] + '">' + f[1] + ' ' + f[2] + '</button>').join('') + '</div>';
   if (orte.length > 1) {
     html += '<div class="chipslabel">Abfahrtsort</div><div class="chips orte">' + orte.map(o => '<button class="chip' + (ui().filter === 'ort:' + o ? ' on' : '') + '" data-f="ort:' + esc(o) + '">📍 ' + esc(o) + ' ' + ps.filter(p => p.abfahrtsort === o).length + '</button>').join('') + '</div>';
@@ -70,12 +76,13 @@ export function viewTeilnehmer() {
     const l = d.querySelector('#plist');
     l.innerHTML = '';
     const fl = sortParts(ps.filter(p => matchSearch(p, ui().search) && passFilter(p, ui().filter)));
-    d.querySelector('#cnt').textContent = fl.length + ' angezeigt · ' + present + '/' + ps.length + ' eingecheckt';
+    d.querySelector('#cnt').textContent = fl.length + ' angezeigt · ' + present + '/' + ps.length + (ui().leg === 'rueck' ? ' Rückfahrt' : ' eingecheckt');
     if (!fl.length) l.innerHTML = '<p class="muted" style="text-align:center;padding:30px">Keine Treffer.</p>';
     fl.forEach(p => l.appendChild(pcard(p)));
   };
   redraw();
 
+  d.querySelectorAll('#legSeg button').forEach(b => b.onclick = () => { ui().leg = b.dataset.l; save(); render(); });
   const s = d.querySelector('#srch');
   s.oninput = () => { ui().search = s.value; save(); redraw(); };
   d.querySelectorAll('.chip').forEach(c => c.onclick = () => { ui().filter = c.dataset.f; render(); });
@@ -110,7 +117,7 @@ export function openAddParticipant() {
     const bid = 'm' + uid();
     const handy = n.querySelector('#apHandy').value.trim();
     t.bookings.push({ id: bid, bucher: name, handy, paid: segVal.paid });
-    t.participants.push({ nr, name, handy, abfahrtsort: n.querySelector('#apOrt').value.trim(), ticket: n.querySelector('#apTicket').value.trim(), skat: '', sondergepaeck: n.querySelector('#apGep').value.trim(), camp: segVal.camp, kommentar: '', buchungId: bid, bucher: name, istBucher: true, bezahlt: segVal.paid, anwesend: false, sitzplatz: '', signature: null, status: '', manuell: true, page: null });
+    t.participants.push({ nr, name, handy, abfahrtsort: n.querySelector('#apOrt').value.trim(), ticket: n.querySelector('#apTicket').value.trim(), skat: '', sondergepaeck: n.querySelector('#apGep').value.trim(), camp: segVal.camp, kommentar: '', buchungId: bid, bucher: name, istBucher: true, bezahlt: segVal.paid, anwesend: false, rueckAnwesend: false, sitzplatz: '', signature: null, status: '', manuell: true, page: null });
     save(); bg._close(); render(); toast(name + ' hinzugefügt (Nr ' + nr + ')');
   };
 }
@@ -130,11 +137,21 @@ function pcard(p) {
   if (p.status) tags.push('<span class="tag" style="font-weight:600">' + (p.status === 'abgemeldet' ? '🚫 Abgemeldet' : '🚷 Nicht angetreten') + '</span>');
   if (p.manuell) tags.push('<span class="tag" style="background:var(--accent-l);color:var(--accent-d)">＋ manuell</span>');
 
+  const rueck = ui().leg === 'rueck';
+  const on = aboard(p);
   const c = elFromHTML('<div class="pcard"></div>');
   if (p.status) c.style.opacity = '0.62';
-  c.innerHTML = '<div class="top"><div class="nrbadge">' + p.nr + '</div><div style="flex:1;min-width:0"><div class="pname">' + esc(p.name) + (p.signature ? ' <span title="unterschrieben" style="color:var(--accent)">✍︎</span>' : '') + '</div><div class="ptags">' + tags.join('') + '</div></div><button class="checkbtn' + (p.anwesend ? ' on' : '') + '" title="' + (p.anwesend ? 'eingecheckt' : 'einchecken (Unterschrift)') + '">' + (p.anwesend ? '✓' : '') + '</button></div><div class="pactions"><a class="pact call" href="' + telHref(p.handy) + '">📞 Anrufen</a><a class="pact wa" href="' + waHref(p.handy, '') + '" target="_blank" rel="noopener">💬 WhatsApp</a><button class="pact sign">' + (p.signature ? '✍︎' : '☰') + ' Details</button></div>';
+  c.innerHTML = '<div class="top"><div class="nrbadge">' + p.nr + '</div><div style="flex:1;min-width:0"><div class="pname">' + esc(p.name) + (p.signature ? ' <span title="unterschrieben" style="color:var(--accent)">✍︎</span>' : '') + '</div><div class="ptags">' + tags.join('') + '</div></div><button class="checkbtn' + (on ? ' on' : '') + '" title="' + (on ? 'an Bord' : (rueck ? 'Rückfahrt abhaken' : 'einchecken (Unterschrift)')) + '">' + (on ? '✓' : '') + '</button></div><div class="pactions"><a class="pact call" href="' + telHref(p.handy) + '">📞 Anrufen</a><a class="pact wa" href="' + waHref(p.handy, '') + '" target="_blank" rel="noopener">💬 WhatsApp</a><button class="pact sign">' + (p.signature ? '✍︎' : '☰') + ' Details</button></div>';
   c.querySelector('.checkbtn').onclick = e => {
     e.stopPropagation();
+    if (rueck) {
+      // Rückfahrt: einfaches Abhaken ohne Rückfrage – außer es fehlt noch die
+      // Unterschrift (reine Rückfahrt-Gäste), dann läuft der Check-in-Flow.
+      if (p.rueckAnwesend) { p.rueckAnwesend = false; save(); render(); }
+      else if (p.signature) { p.rueckAnwesend = true; save(); render(); toast(p.name + ' – Rückfahrt ✓'); }
+      else openCheckin(p, 'rueck');
+      return;
+    }
     if (p.anwesend) {
       confirmSheet({
         title: 'Check-in zurücknehmen?',
@@ -169,7 +186,7 @@ export function openDetail(p) {
     '<div class="field"><label>Teilnehmer-Nr. (aus Liste)</label><input id="nrInp" inputmode="numeric" value="' + esc(String(p.nr)) + '"></div>' +
     (sug ? ('<div class="note" id="nrSug">⚠️ Nr. <b>' + p.nr + '</b> kommt doppelt vor – laut Reihenfolge sollte das <b>Nr. ' + sug + '</b> sein. <button class="linkbtn" id="nrFix" style="margin-left:2px;font-weight:600">→ auf ' + sug + ' setzen</button></div>') : '') +
     (!p.bezahlt && b && b.handy ? ('<a class="btn out" href="' + telHref(b.handy) + '" style="margin-bottom:14px">💶 Bucher ' + esc(p.bucher) + ' anrufen (Geld)</a>') : '') +
-    '<div class="row" style="gap:8px;margin-bottom:14px"><a class="btn sec" style="flex:1" href="' + telHref(p.handy) + '">📞 Anrufen</a>' + (normPhone(p.handy) ? '<a class="btn sec" style="flex:1" href="' + waHref(p.handy, '') + '" target="_blank" rel="noopener">💬 WhatsApp</a>' : '') + '</div><div class="field"><label>Sitzplatz-Nr.</label><input id="seatInp" inputmode="numeric" placeholder="z. B. 14" value="' + esc(p.sitzplatz) + '"></div><div class="field"><label>Kommentar</label><textarea id="cmtInp" placeholder="Notiz …">' + esc(p.kommentar || '') + '</textarea></div><div class="sectitle">✍︎ Unterschrift / Check-in</div><div id="sigThumb"></div><button class="btn out" id="sigBtn" style="margin-top:6px">✍︎ Unterschrift erfassen</button><button class="btn" id="checkInBtn" style="margin-top:10px"></button><div class="sectitle">Status</div><div class="seg" id="statusSeg"><button data-s="">Aktiv</button><button data-s="abgemeldet">Abgemeldet</button><button data-s="nicht_angetreten">Nicht angetr.</button></div><button class="btn sec" id="rmP" style="margin-top:18px;color:var(--danger)">🗑 Teilnehmer entfernen</button>';
+    '<div class="row" style="gap:8px;margin-bottom:14px"><a class="btn sec" style="flex:1" href="' + telHref(p.handy) + '">📞 Anrufen</a>' + (normPhone(p.handy) ? '<a class="btn sec" style="flex:1" href="' + waHref(p.handy, '') + '" target="_blank" rel="noopener">💬 WhatsApp</a>' : '') + '</div><div class="field"><label>Sitzplatz-Nr.</label><input id="seatInp" inputmode="numeric" placeholder="z. B. 14" value="' + esc(p.sitzplatz) + '"></div><div class="field"><label>Kommentar</label><textarea id="cmtInp" placeholder="Notiz …">' + esc(p.kommentar || '') + '</textarea></div><div class="sectitle">✍︎ Unterschrift / Check-in</div><div id="sigThumb"></div><button class="btn out" id="sigBtn" style="margin-top:6px">✍︎ Unterschrift erfassen</button><button class="btn" id="checkInBtn" style="margin-top:10px"></button><button class="btn sec" id="rueckBtn" style="margin-top:8px"></button><div class="sectitle">Status</div><div class="seg" id="statusSeg"><button data-s="">Aktiv</button><button data-s="abgemeldet">Abgemeldet</button><button data-s="nicht_angetreten">Nicht angetr.</button></div><button class="btn sec" id="rmP" style="margin-top:18px;color:var(--danger)">🗑 Teilnehmer entfernen</button>';
   const pg = openPage(esc(p.name) + ' · Nr ' + p.nr, n);
 
   // Nummer ändern (manuell oder per Vorschlag).
@@ -189,6 +206,10 @@ export function openDetail(p) {
     if (p.anwesend) { btn.textContent = '✓ Eingecheckt – zurücknehmen'; btn.disabled = false; btn.className = 'btn sec'; }
     else if (p.signature) { btn.textContent = 'Einchecken'; btn.disabled = false; btn.className = 'btn'; }
     else { btn.textContent = 'Zum Einchecken bitte unterschreiben'; btn.disabled = true; btn.className = 'btn'; }
+    const rb = n.querySelector('#rueckBtn');
+    if (p.rueckAnwesend) { rb.textContent = '✓ Rückfahrt: an Bord – zurücknehmen'; rb.disabled = false; }
+    else if (p.signature) { rb.textContent = '🔁 Rückfahrt abhaken'; rb.disabled = false; }
+    else { rb.textContent = 'Rückfahrt: zuerst unterschreiben'; rb.disabled = true; }
   };
   n.querySelector('#togPay').onclick = function () { togglePay(p); this.textContent = p.bezahlt ? '✓ Bezahlt' : '⚠️ Offen – tippen'; };
   n.querySelector('#seatInp').oninput = e => { p.sitzplatz = e.target.value.trim(); save(); };
@@ -197,6 +218,11 @@ export function openDetail(p) {
     if (p.anwesend) { p.anwesend = false; }
     else { if (!p.signature) { toast('Bitte zuerst unterschreiben'); return; } p.anwesend = true; }
     save(); pg._close(); toast(p.anwesend ? p.name + ' eingecheckt ✓' : 'ausgecheckt');
+  };
+  n.querySelector('#rueckBtn').onclick = () => {
+    if (!p.rueckAnwesend && !p.signature) { toast('Bitte zuerst unterschreiben'); return; }
+    p.rueckAnwesend = !p.rueckAnwesend;
+    save(); refreshBtn(); toast(p.rueckAnwesend ? p.name + ' – Rückfahrt ✓' : 'Rückfahrt zurückgenommen');
   };
   const sigThumb = n.querySelector('#sigThumb');
   const refreshSig = () => { sigThumb.innerHTML = p.signature ? ('<div class="sigsaved" style="margin-bottom:0"><img src="' + p.signature + '" alt="Unterschrift"></div>') : ''; refreshBtn(); };

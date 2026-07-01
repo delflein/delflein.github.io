@@ -58,7 +58,7 @@ export async function doImport(file) {
     const t = T();
     const prev = {};
     t.participants.forEach(p => prev[p.nr] = p);
-    participants.forEach(p => { const o = prev[p.nr]; if (o) { p.anwesend = o.anwesend; p.sitzplatz = o.sitzplatz; p.signature = o.signature; } });
+    participants.forEach(p => { const o = prev[p.nr]; if (o) { p.anwesend = o.anwesend; p.rueckAnwesend = o.rueckAnwesend; p.sitzplatz = o.sitzplatz; p.signature = o.signature; } });
 
     t.participants = participants; t.bookings = bookings; t.pdfData = b64; t.pdfName = file.name; t.bounds = meta.bounds;
     const fn = file.name.replace(/\.pdf$/i, '');

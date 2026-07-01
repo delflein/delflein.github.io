@@ -123,10 +123,11 @@ export function openSignaturePad(opts) {
  * markieren. Der Übergang Sheet → Pad läuft über _closeSilent + noPush, damit
  * „OK" hinterher sauber in die App zurückführt (nur ein History-Eintrag).
  */
-export function openCheckin(p) {
+export function openCheckin(p, leg) {
+  const rueck = leg === 'rueck';
   const n = elFromHTML('<div></div>');
   n.innerHTML =
-    '<h2>Einchecken · ' + esc(p.name) + '</h2>' +
+    '<h2>' + (rueck ? 'Rückfahrt · ' : 'Einchecken · ') + esc(p.name) + '</h2>' +
     '<div class="tiny muted" style="margin:0 0 14px">Nr ' + p.nr + (p.bucher && !p.istBucher ? (' · gebucht von ' + esc(p.bucher)) : '') + (p.sitzplatz ? (' · Sitz ' + esc(p.sitzplatz)) : '') + '</div>' +
     '<button class="btn" id="ciSign" style="margin-bottom:10px">✍︎ Unterschrift erfassen</button>' +
     '<button class="btn sec" id="ciAbg" style="margin-bottom:10px">🚫 Abgemeldet</button>' +
@@ -136,9 +137,13 @@ export function openCheckin(p) {
     bg._closeSilent();
     openSignaturePad({
       title: 'Unterschrift · ' + p.name, noPush: true,
-      onSave: data => { p.signature = data; p.anwesend = true; p.status = ''; save(); render(); toast(p.name + ' eingecheckt ✓'); },
+      onSave: data => {
+        p.signature = data; p.status = '';
+        if (rueck) p.rueckAnwesend = true; else p.anwesend = true;
+        save(); render(); toast(p.name + (rueck ? ' – Rückfahrt ✓' : ' eingecheckt ✓'));
+      },
     });
   };
-  n.querySelector('#ciAbg').onclick = () => { p.status = 'abgemeldet'; p.anwesend = false; save(); bg._close(); render(); toast(p.name + ' als abgemeldet markiert'); };
-  n.querySelector('#ciNa').onclick = () => { p.status = 'nicht_angetreten'; p.anwesend = false; save(); bg._close(); render(); toast(p.name + ' als nicht angetreten markiert'); };
+  n.querySelector('#ciAbg').onclick = () => { p.status = 'abgemeldet'; p.anwesend = false; p.rueckAnwesend = false; save(); bg._close(); render(); toast(p.name + ' als abgemeldet markiert'); };
+  n.querySelector('#ciNa').onclick = () => { p.status = 'nicht_angetreten'; p.anwesend = false; p.rueckAnwesend = false; save(); bg._close(); render(); toast(p.name + ' als nicht angetreten markiert'); };
 }

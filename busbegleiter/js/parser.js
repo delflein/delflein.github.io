@@ -157,7 +157,7 @@ export function parseTeilnehmer(pages) {
           abfahrtsort: c.abfahrtsort, ticket: c.ticket, skat: c.skat, sondergepaeck: c.sondergepaeck,
           camp: /ja/i.test(c.camp), kommentar: c.kommentar,
           buchungId: cur.id, bucher: cur.bucher, istBucher: false, bezahlt: cur.paid,
-          anwesend: false, sitzplatz: '', signature: null, status: '', manuell: false,
+          anwesend: false, rueckAnwesend: false, sitzplatz: '', signature: null, status: '', manuell: false,
           // Für das spätere Stempeln in die Original-Liste: Seite, y und x-Bereich der Unterschriftsspalte
           page: pageIndex, y: Math.round(row[0].y), sx0: Math.round(B.sitzplatz), sx1: Math.round(B.handy),
         });

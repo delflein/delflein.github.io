@@ -23,8 +23,9 @@ export function render() {
   document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === ui().tab));
   $('#hdrTitle').textContent = t ? t.name : 'Feierreisen Busbegleiter';
   if (t) {
-    const present = t.participants.filter(p => p.anwesend).length;
-    $('#hdrSub').textContent = (t.busNr ? ('Bus ' + t.busNr + ' · ') : '') + t.participants.length + ' Gäste · ' + present + ' an Bord' + (t.datum ? (' · ' + fmtDate(t.datum)) : '');
+    const rueck = ui().leg === 'rueck' && ui().tab === 'teilnehmer';
+    const present = t.participants.filter(p => rueck ? p.rueckAnwesend : p.anwesend).length;
+    $('#hdrSub').textContent = (t.busNr ? ('Bus ' + t.busNr + ' · ') : '') + t.participants.length + ' Gäste · ' + present + ' an Bord' + (rueck ? ' (Rückfahrt)' : '') + (t.datum ? (' · ' + fmtDate(t.datum)) : '');
   } else {
     $('#hdrSub').textContent = state.trips.length ? 'Fahrt auswählen' : 'Noch keine Fahrt angelegt';
   }
@@ -48,7 +49,7 @@ export function updateTabBadges() {
   tb.querySelectorAll('.badge').forEach(b => b.remove());
   const t = T();
   if (!t || !t.participants.length) return;
-  const fehlt = t.participants.filter(p => !p.anwesend).length;
+  const fehlt = t.participants.filter(p => ui().leg === 'rueck' ? !p.rueckAnwesend : !p.anwesend).length;
   const seats = t.participants.filter(p => !p.sitzplatz).length;
   const add = (tab, n) => { if (!n) return; const btn = tb.querySelector('button[data-tab="' + tab + '"]'); const s = document.createElement('span'); s.className = 'badge'; s.textContent = n > 99 ? '99+' : n; btn.appendChild(s); };
   add('teilnehmer', fehlt);

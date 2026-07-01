@@ -45,7 +45,7 @@ export function defaults() {
       betreuer: '', konto: { inhaber: '', iban: '', bank: '' },
       waTemplate: 'Moin! Hier der Link zur WhatsApp-Gruppe für unsere Fahrt: {invite}',
     },
-    ui: { tab: 'teilnehmer', filter: 'alle', search: '', sortBy: 'nr', seatSearch: '' },
+    ui: { tab: 'teilnehmer', filter: 'alle', search: '', sortBy: 'nr', seatSearch: '', leg: 'hin' },
   };
 }
 
@@ -145,6 +145,7 @@ function normalize(s) {
   if (s.settings.waTemplate == null) s.settings.waTemplate = defaults().settings.waTemplate;
   delete s.settings.groupInvite;
   s.ui = s.ui || defaults().ui;
+  if (!s.ui.leg) s.ui.leg = 'hin';
   (s.trips || []).forEach(t => {
     if (t.groupInvite == null) t.groupInvite = '';
     if (t.pdfData === undefined) t.pdfData = null;
@@ -158,7 +159,7 @@ function normalize(s) {
       s.settings.konto = { inhaber: t.forms.auslagen.kontoinhaber || '', iban: t.forms.auslagen.iban || '', bank: t.forms.auslagen.bank || '' };
     }
     t.participants = t.participants || [];
-    t.participants.forEach(p => { if (p.status === undefined) p.status = ''; });
+    t.participants.forEach(p => { if (p.status === undefined) p.status = ''; if (p.rueckAnwesend === undefined) p.rueckAnwesend = false; });
     t.bookings = t.bookings || [];
   });
   return s;
