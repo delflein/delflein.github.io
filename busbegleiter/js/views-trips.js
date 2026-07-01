@@ -5,7 +5,7 @@
 import { $, elFromHTML, toast } from './dom.js';
 import { esc, fmtDate } from './util.js';
 import { state, T, ui, save, newTrip } from './state.js';
-import { openSheet } from './overlay.js';
+import { openSheet, confirmSheet } from './overlay.js';
 import { render } from './app.js';
 import { openAddParticipant } from './views-teilnehmer.js';
 
@@ -34,11 +34,16 @@ function tripItem(t) {
   it.querySelector('.nrbadge').onclick = open;
   it.querySelector('.tdel').onclick = e => {
     e.stopPropagation();
-    if (confirm('Fahrt „' + t.name + '" wirklich löschen? Alle Teilnehmer, Unterschriften und Formulare gehen verloren.')) {
-      state.trips = state.trips.filter(x => x.id !== t.id);
-      if (state.activeId === t.id) state.activeId = null;
-      save(); render(); toast('Fahrt gelöscht');
-    }
+    confirmSheet({
+      title: 'Fahrt löschen?',
+      text: '„' + t.name + '" wird endgültig gelöscht – alle Teilnehmer, Unterschriften und Formulare gehen verloren.',
+      okLabel: '🗑 Fahrt löschen', danger: true,
+      onOk: () => {
+        state.trips = state.trips.filter(x => x.id !== t.id);
+        if (state.activeId === t.id) state.activeId = null;
+        save(); render(); toast('Fahrt gelöscht');
+      },
+    });
   };
   return it;
 }

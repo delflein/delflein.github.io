@@ -16,7 +16,7 @@ import { state, T, ui, save } from './state.js';
 import { toast, elFromHTML, $ } from './dom.js';
 import { esc, money, sumItems, fmtDate, busTagOf, evTagOf, eurTag, safeTag, abToB64, b64ToBytes, dataURLToBytes } from './util.js';
 import { parseTeilnehmer, nrSuggestions } from './parser.js';
-import { openSheet } from './overlay.js';
+import { openSheet, askSheet } from './overlay.js';
 import { render } from './app.js';
 import { openNewTrip } from './views-trips.js';
 
@@ -116,11 +116,19 @@ export function showImportNrFixes(sugs, otherText) {
  * Die vielen Zahlen in den stamp*-Funktionen sind KALIBRIERTE Koordinaten,
  * damit der Text exakt auf den Linien der Original-Formulare landet.
  */
-export async function generatePDF() {
+export async function generatePDF(opts) {
   const t = T(); if (!t) return;
   if (!window.PDFLib || !window.jspdf) { toast('PDF-Bibliotheken laden noch – kurz warten'); return; }
-  if (!t.pdfData) {
-    if (confirm('Für diese Fahrt ist keine Original-Teilnehmerliste gespeichert.\n\nJetzt importieren, um die Original-Liste mit Unterschrift & Sitzplatz zu erzeugen?\n\nOK = importieren  ·  Abbrechen = als Tabelle exportieren')) { $('#pdfInput').click(); return; }
+  if (!t.pdfData && !(opts && opts.tableFallback)) {
+    askSheet({
+      title: 'Keine Original-Liste gespeichert',
+      text: 'Für diese Fahrt ist keine Original-Teilnehmerliste gespeichert. Jetzt importieren, um die Original-Liste mit Unterschrift & Sitzplatz zu erzeugen – oder stattdessen als einfache Tabelle exportieren?',
+      buttons: [
+        { label: '📄 Jetzt importieren', onTap: () => $('#pdfInput').click() },
+        { label: 'Als Tabelle exportieren', cls: 'sec', onTap: () => generatePDF({ tableFallback: true }) },
+      ],
+    });
+    return;
   }
   toast('Erstelle 3 PDFs …');
   const { jsPDF } = window.jspdf;

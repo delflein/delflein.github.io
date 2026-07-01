@@ -78,6 +78,32 @@ export function openSheet(innerNode, after) {
   return bg;
 }
 
+/**
+ * Auswahl-Sheet: Frage + eigene Buttons + „Abbrechen".
+ * Ersetzt window.confirm(), das in der installierten iOS-PWA unzuverlässig ist.
+ * @param {{title?:string, text?:string, buttons:Array<{label:string, cls?:string, onTap?:Function}>}} opts
+ */
+export function askSheet(opts) {
+  const n = elFromHTML('<div></div>');
+  if (opts.title) { const h = document.createElement('h2'); h.textContent = opts.title; n.appendChild(h); }
+  if (opts.text) { const p = document.createElement('p'); p.className = 'muted'; p.style.margin = '0 2px 14px'; p.textContent = opts.text; n.appendChild(p); }
+  const bg = openSheet(n);
+  opts.buttons.concat([{ label: 'Abbrechen', cls: 'sec' }]).forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'btn' + (b.cls ? ' ' + b.cls : '');
+    btn.style.marginTop = '8px';
+    btn.textContent = b.label;
+    btn.onclick = () => { bg._close(); if (b.onTap) b.onTap(); };
+    n.appendChild(btn);
+  });
+  return bg;
+}
+
+/** Ja/Nein-Bestätigung als Sheet. */
+export function confirmSheet({ title, text, okLabel, danger, onOk }) {
+  return askSheet({ title, text, buttons: [{ label: okLabel || 'OK', cls: danger ? 'danger' : '', onTap: onOk }] });
+}
+
 /** Vollbild-Seite mit Titelleiste + „‹ Zurück" öffnen. Schließen → render(). */
 export function openPage(title, innerNode) {
   const pg = elFromHTML('<div class="page"></div>');

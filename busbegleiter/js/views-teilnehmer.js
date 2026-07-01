@@ -8,7 +8,7 @@
 import { $, elFromHTML, toast } from './dom.js';
 import { esc, telHref, waHref, normPhone, uid } from './util.js';
 import { state, T, ui, save, bookingOf } from './state.js';
-import { openSheet, openPage } from './overlay.js';
+import { openSheet, openPage, confirmSheet } from './overlay.js';
 import { openCheckin, openSignaturePad } from './signature.js';
 import { nrSuggestions } from './parser.js';
 import { render, updateTabBadges } from './app.js';
@@ -135,8 +135,14 @@ function pcard(p) {
   c.innerHTML = '<div class="top"><div class="nrbadge">' + p.nr + '</div><div style="flex:1;min-width:0"><div class="pname">' + esc(p.name) + (p.signature ? ' <span title="unterschrieben" style="color:var(--accent)">✍︎</span>' : '') + '</div><div class="ptags">' + tags.join('') + '</div></div><button class="checkbtn' + (p.anwesend ? ' on' : '') + '" title="' + (p.anwesend ? 'eingecheckt' : 'einchecken (Unterschrift)') + '">' + (p.anwesend ? '✓' : '') + '</button></div><div class="pactions"><a class="pact call" href="' + telHref(p.handy) + '">📞 Anrufen</a><a class="pact wa" href="' + waHref(p.handy, '') + '" target="_blank" rel="noopener">💬 WhatsApp</a><button class="pact sign">' + (p.signature ? '✍︎' : '☰') + ' Details</button></div>';
   c.querySelector('.checkbtn').onclick = e => {
     e.stopPropagation();
-    if (p.anwesend) { if (confirm('Check-in von ' + p.name + ' zurücknehmen?')) { p.anwesend = false; save(); render(); } }
-    else openCheckin(p);
+    if (p.anwesend) {
+      confirmSheet({
+        title: 'Check-in zurücknehmen?',
+        text: p.name + ' wird wieder als „fehlt" geführt. Die Unterschrift bleibt gespeichert.',
+        okLabel: 'Check-in zurücknehmen',
+        onOk: () => { p.anwesend = false; save(); render(); },
+      });
+    } else openCheckin(p);
   };
   c.querySelector('.pact.sign').onclick = () => openDetail(p);
   if (!normPhone(p.handy)) c.querySelector('.pact.wa').classList.add('hidden');
@@ -202,13 +208,18 @@ export function openDetail(p) {
   seg.querySelectorAll('button').forEach(bx => bx.onclick = () => { p.status = bx.dataset.s; save(); updSeg(); });
   updSeg();
   n.querySelector('#rmP').onclick = () => {
-    if (confirm('„' + p.name + '" wirklich aus der Liste entfernen?')) {
-      const arr = T().participants;
-      const ix = arr.indexOf(p);
-      if (ix >= 0) arr.splice(ix, 1);
-      if (p.buchungId && !arr.some(x => x.buchungId === p.buchungId)) T().bookings = T().bookings.filter(b => b.id !== p.buchungId);
-      save(); pg._close(); toast('Teilnehmer entfernt');
-    }
+    confirmSheet({
+      title: 'Teilnehmer entfernen?',
+      text: '„' + p.name + '" wird endgültig aus der Liste entfernt – inklusive Unterschrift und Sitzplatz.',
+      okLabel: '🗑 Entfernen', danger: true,
+      onOk: () => {
+        const arr = T().participants;
+        const ix = arr.indexOf(p);
+        if (ix >= 0) arr.splice(ix, 1);
+        if (p.buchungId && !arr.some(x => x.buchungId === p.buchungId)) T().bookings = T().bookings.filter(b => b.id !== p.buchungId);
+        save(); pg._close(); toast('Teilnehmer entfernt');
+      },
+    });
   };
 }
 
