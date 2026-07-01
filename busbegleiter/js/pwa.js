@@ -1,0 +1,80 @@
+/* =============================================================================
+   pwa.js – Progressive-Web-App: Service Worker + „Zum Home-Bildschirm"-Hinweis
+   -----------------------------------------------------------------------------
+   • Registriert den Service Worker (sw.js) für den Offline-Betrieb.
+   • Zeigt einen dezenten Hinweis, die App zu installieren:
+       – iOS/Safari: Anleitung (Teilen → „Zum Home-Bildschirm"), da iOS keinen
+         automatischen Installieren-Knopf per Code erlaubt.
+       – Android/Chrome: echter Installieren-Knopf über das beforeinstallprompt-Event.
+     Einmal weggewischt, erscheint der Hinweis nicht wieder (localStorage).
+   ============================================================================= */
+
+import { elFromHTML } from './dom.js';
+
+const DISMISS_KEY = 'bb_a2hs_dismissed';
+
+/** Läuft die App bereits „installiert" (Standalone)? */
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+/** Öffentlicher Einstiegspunkt (in app.js beim Boot aufgerufen). */
+export function initPWA() {
+  registerServiceWorker();
+  setupInstallHint();
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  // Nach dem Laden registrieren, damit der erste Start nicht ausgebremst wird.
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW-Registrierung fehlgeschlagen:', err));
+  });
+}
+
+function setupInstallHint() {
+  if (isStandalone()) return;                                   // schon installiert
+  if (localStorage.getItem(DISMISS_KEY)) return;                // schon weggewischt
+
+  const ua = navigator.userAgent || '';
+  const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
+
+  // Android/Chrome: echtes Install-Event abfangen.
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showBanner({
+      text: 'Installiere <b>Busbegleiter</b> als App – schneller Start & offline im Bus.',
+      button: 'Installieren',
+      onButton: async () => { hideBanner(); deferredPrompt.prompt(); try { await deferredPrompt.userChoice; } catch (e) {} deferredPrompt = null; },
+    });
+  });
+
+  // iOS/Safari: es gibt kein Install-Event → Anleitung einblenden.
+  if (isIOS && isSafari) {
+    setTimeout(() => {
+      if (!isStandalone() && !localStorage.getItem(DISMISS_KEY)) {
+        showBanner({ text: 'Als App installieren: unten auf <b>Teilen</b> ⬆︎ tippen und dann <b>„Zum Home-Bildschirm"</b> wählen.' });
+      }
+    }, 2500);
+  }
+}
+
+let _banner = null;
+
+function showBanner({ text, button, onButton }) {
+  if (_banner) return;
+  _banner = elFromHTML(
+    '<div class="a2hs"><div class="ic">📲</div><div class="tx">' + text +
+    (button ? '<div style="margin-top:8px"><button class="btn" id="a2hsBtn" style="width:auto;padding:8px 16px">' + button + '</button></div>' : '') +
+    '</div><button class="cl" title="Ausblenden">✕</button></div>');
+  document.body.appendChild(_banner);
+  _banner.querySelector('.cl').onclick = () => { localStorage.setItem(DISMISS_KEY, '1'); hideBanner(); };
+  if (button) _banner.querySelector('#a2hsBtn').onclick = onButton;
+}
+
+function hideBanner() {
+  if (_banner) { _banner.remove(); _banner = null; }
+}

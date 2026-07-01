@@ -1,0 +1,204 @@
+/* =============================================================================
+   Busbegleiter – Stylesheet
+   -----------------------------------------------------------------------------
+   Mobile-first (iPhone). Alle Farben laufen über CSS-Variablen (Design-Tokens),
+   damit Light-/Dark-Mode an EINER Stelle definiert ist. Reihenfolge der Abschnitte:
+     1. Design-Tokens          6. Teilnehmer-Karten
+     2. Reset & Basis          7. Tab-Leiste (unten)
+     3. Formular-Elemente      8. Buttons
+     4. App-Leiste (Kopf)      9. Sheets & Vollbild-Seiten
+     5. Layout & Utilities    10. Unterschrift, Formulare, Sonstiges
+   ============================================================================= */
+
+/* ---------- 1. Design-Tokens ---------- */
+:root{
+  --accent:#0e7c66; --accent-d:#0a5d4c; --accent-l:#e3f3ef;   /* Marken-Grün */
+  --bg:#f4f5f7; --card:#ffffff; --text:#16191d; --muted:#6b7280; --line:#e4e7ec;
+  --danger:#c0392b; --warn:#b7791f; --warn-bg:#fdf3e2; --ok:#0e7c66; --ok-bg:#e3f3ef;
+  --chip:#eef1f4; --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  /* Safe-Area (iPhone-Notch / Home-Indikator) */
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#15171b; --card:#1e2126; --text:#e9ecef; --muted:#9aa3ad; --line:#2c3138;
+    --accent:#1aa184; --accent-d:#0e7c66; --accent-l:#13322c; --chip:#272c33;
+    --warn-bg:#3a2c14; --warn:#e0b35e; --ok-bg:#13322c; --shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+
+/* ---------- 2. Reset & Basis ---------- */
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{
+  margin:0; padding:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px; line-height:1.45; -webkit-text-size-adjust:100%;
+}
+body{ padding-bottom:calc(64px + var(--safe-b)); } /* Platz für die Tab-Leiste */
+body.notrip{ padding-bottom:var(--safe-b); }       /* ohne Fahrt: keine Tab-Leiste */
+button{ cursor:pointer; border:none; background:none; font:inherit; color:inherit; }
+.hidden{ display:none!important; }
+
+/* ---------- 3. Formular-Elemente ---------- */
+input:not([type=checkbox]):not([type=radio]),select,textarea{
+  font:inherit; color:var(--text); background:var(--card);
+  border:1px solid var(--line); border-radius:10px; padding:10px 11px; outline:none; width:100%;
+}
+input::placeholder,textarea::placeholder{ color:var(--muted); opacity:1; }
+input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{ border-color:var(--accent); }
+
+/* ---------- 4. App-Leiste (Kopf) ---------- */
+.app-bar{
+  position:sticky; top:0; z-index:30; background:var(--accent); color:#fff;
+  padding:calc(10px + var(--safe-t)) 14px 10px; box-shadow:var(--shadow);
+}
+.tripbtn{ color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; gap:7px; max-width:80%; }
+.tripbtn .chev{ font-size:13px; opacity:.85; }
+.app-bar .sub{ font-size:12.5px; opacity:.9; margin-top:2px; }
+.app-bar .gear{ position:absolute; right:10px; top:calc(10px + var(--safe-t)); color:#fff; font-size:20px; padding:6px 8px; }
+
+/* ---------- 5. Layout & Utilities ---------- */
+.wrap{ max-width:760px; margin:0 auto; padding:12px; }
+.card{ background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); }
+.row{ display:flex; align-items:center; gap:10px; }
+.muted{ color:var(--muted); } .small{ font-size:13px; } .tiny{ font-size:11.5px; } .bold{ font-weight:600; }
+.sectitle{ font-size:15px; font-weight:700; margin:18px 2px 8px; display:flex; align-items:center; gap:8px; }
+hr.sep{ border:none; border-top:1px solid var(--line); margin:14px 0; }
+.linkbtn{ color:var(--accent); font-weight:600; font-size:14px; padding:4px 2px; background:none; width:auto; }
+
+/* Suche + Filter-Chips */
+.search{ position:relative; margin-bottom:10px; }
+.search input{ padding-left:38px; border-radius:12px; }
+.search .ic{ position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); }
+.chips{ display:flex; flex-wrap:wrap; gap:7px; padding:2px 0 6px; }
+.chip{ white-space:nowrap; padding:7px 12px; border-radius:999px; background:var(--chip); color:var(--text); font-size:13.5px; border:1px solid transparent; }
+.chip.on{ background:var(--accent); color:#fff; }
+.chips.orte .chip{ background:transparent; border:1px solid var(--line); }
+.chips.orte .chip.on{ background:var(--accent); color:#fff; border-color:var(--accent); }
+.chipslabel{ font-size:11.5px; color:var(--muted); margin:2px 2px 4px; }
+.counts{ font-size:13px; color:var(--muted); margin:2px 2px 10px; }
+
+/* ---------- 6. Teilnehmer-Karten ---------- */
+.plist{ display:flex; flex-direction:column; gap:8px; }
+.pcard{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:11px 12px; box-shadow:var(--shadow); }
+.pcard .top{ display:flex; align-items:flex-start; gap:10px; }
+.nrbadge{ flex:0 0 auto; width:34px; height:34px; border-radius:10px; background:var(--accent-l); color:var(--accent-d); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
+.pname{ font-weight:600; font-size:15.5px; line-height:1.2; }
+.ptags{ display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+
+/* Info-Bubbles (Ort, Ticket, Camping … und Kommentar) */
+.tag{ font-size:11.5px; padding:2px 7px; border-radius:7px; background:var(--chip); color:var(--muted); }
+.tag.cm{ background:#eaf3ff; color:#1d4ed8; } .tag.gepaeck{ background:#f3eafe; color:#7c3aed; }
+.tag.offen{ background:var(--warn-bg); color:var(--warn); font-weight:600; }
+.tag.bucher{ background:#fff4e6; color:#b7791f; }
+.tag.seat{ background:var(--accent-l); color:var(--accent-d); }
+.tag.cmt{ background:#e6f7f0; color:#0e7c66; max-width:100%; white-space:normal; } /* Kommentar aus der Liste */
+@media(prefers-color-scheme:dark){
+  .tag.cm{ background:#16273f; color:#7fb0ff; } .tag.gepaeck{ background:#2a1f3d; color:#c4a3f5; }
+  .tag.bucher{ background:#3a2c14; color:#e0b35e; } .tag.cmt{ background:#123029; color:#57c9a6; }
+}
+
+/* Aktions-Buttons je Karte (Anrufen / WhatsApp / Details) */
+.pactions{ display:flex; gap:7px; margin-top:10px; }
+.pact{ flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:9px 4px; border-radius:10px; background:var(--chip); font-size:13px; font-weight:500; }
+.pact.call{ background:#e7f6ee; color:#0e7c66; } .pact.wa{ background:#e5f7ec; color:#128c4a; } .pact.sign{ background:var(--accent-l); color:var(--accent-d); }
+@media(prefers-color-scheme:dark){ .pact.call,.pact.wa{ background:#13322c; color:#41c79e; } }
+
+/* Check-in-Knopf (Häkchen) */
+.checkbtn{ flex:0 0 auto; width:46px; height:46px; border-radius:12px; border:2px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:22px; background:var(--card); color:var(--muted); }
+.checkbtn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+/* ---------- 7. Tab-Leiste (unten) ---------- */
+.tabbar{ position:fixed; bottom:0; left:0; right:0; z-index:40; display:flex; background:var(--card); border-top:1px solid var(--line); padding-bottom:var(--safe-b); }
+.tabbar button{ flex:1; padding:8px 2px 6px; display:flex; flex-direction:column; align-items:center; gap:2px; color:var(--muted); font-size:11px; position:relative; }
+.tabbar button.on{ color:var(--accent); } .tabbar .ti{ font-size:21px; line-height:1; }
+.tabbar .badge{ position:absolute; top:4px; left:50%; margin-left:6px; background:var(--danger); color:#fff; font-size:10px; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
+
+/* ---------- 8. Buttons ---------- */
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; border-radius:12px; background:var(--accent); color:#fff; font-weight:600; font-size:15px; width:100%; }
+.btn.sec{ background:var(--chip); color:var(--text); }
+.btn.out{ background:transparent; border:1.5px solid var(--accent); color:var(--accent); }
+.btn:disabled{ opacity:.45; }
+
+/* ---------- 9. Sheets (von unten) & Vollbild-Seiten ---------- */
+.sheet-bg{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; display:flex; align-items:flex-end; justify-content:center; }
+.sheet{ background:var(--bg); width:100%; max-width:760px; max-height:92vh; overflow-y:auto; border-radius:18px 18px 0 0; padding:8px 14px calc(20px + var(--safe-b)); -webkit-overflow-scrolling:touch; }
+.sheet .grab{ width:40px; height:4px; background:var(--line); border-radius:2px; margin:8px auto 6px; }
+.sheet h2{ font-size:18px; margin:6px 2px 12px; }
+.page{ position:fixed; inset:0; z-index:60; background:var(--bg); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.page-bar{ position:sticky; top:0; background:var(--accent); color:#fff; display:flex; align-items:center; gap:8px; padding:calc(10px + var(--safe-t)) 12px 10px; box-shadow:var(--shadow); z-index:1; }
+.page-bar .pback{ color:#fff; font-size:16px; font-weight:600; display:flex; align-items:center; gap:3px; padding:4px 4px; }
+.page-bar .ptitle{ font-weight:600; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.page-body{ max-width:760px; margin:0 auto; padding:14px; }
+
+/* ---------- 10. Felder, Unterschrift, Formulare, Sonstiges ---------- */
+.field{ margin-bottom:12px; }
+.field label{ display:block; font-size:13px; color:var(--muted); margin-bottom:5px; }
+.field textarea{ min-height:64px; resize:vertical; }
+.kv{ display:flex; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:14.5px; }
+.kv:last-child{ border-bottom:none; } .kv .k{ color:var(--muted); }
+
+/* Unterschrift – kleine Inline-Variante */
+.sigwrap{ border:1px solid var(--line); border-radius:12px; background:#fff; position:relative; touch-action:none; }
+.sigwrap canvas{ width:100%; height:200px; display:block; border-radius:12px; }
+.sigwrap .ph{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#aaa; pointer-events:none; }
+.sigsaved{ border:1px solid var(--accent); border-radius:12px; background:#fff; padding:6px; }
+.sigsaved img{ width:100%; display:block; }
+
+/* Unterschrift – Vollbild-Pad (Querformat für großen Stempel) */
+.sigscreen{ position:fixed; inset:0; z-index:70; background:var(--bg); display:flex; flex-direction:column; }
+.sigscreen .sbar{ background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:calc(9px + var(--safe-t)) 12px 9px; font-weight:600; font-size:16px; }
+.sigscreen .sbar button{ color:#fff; font-weight:600; }
+.sigscreen .scanvas{ flex:1; margin:10px; position:relative; touch-action:none; overflow:hidden; }
+.sigscreen .scanvas canvas{ position:absolute; display:block; background:#fff; border:1px solid var(--line); border-radius:10px; touch-action:none; }
+.sigscreen .sph{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#bbb; pointer-events:none; font-size:15px; text-align:center; padding:20px; line-height:1.6; }
+.sigscreen .sfoot{ display:flex; gap:10px; padding:0 12px 6px; }
+.sigscreen .sfoot.statusrow{ padding:6px 12px 0; }
+.sigscreen .sfoot:last-child{ padding-bottom:calc(12px + var(--safe-b)); }
+
+/* Willkommen / Import */
+.welcome{ text-align:center; padding:30px 16px; }
+.tlogo{ width:72px; height:72px; border-radius:20px; background:var(--accent); color:#fff; font-size:38px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; }
+.dropzone{ border:2px dashed var(--accent); border-radius:16px; padding:26px 16px; background:var(--accent-l); margin:16px 0; }
+
+/* Belege / Listen-Zeilen (Auslagen, Einnahmen …) */
+.lrow{ display:flex; gap:8px; align-items:flex-start; margin-bottom:6px; }
+.lrow input{ flex:1; }
+.lrow .att{ flex:0 0 auto; width:40px; height:42px; border-radius:10px; background:var(--chip); color:var(--accent); font-size:16px; }
+.lrow .att.has{ background:var(--accent-l); color:var(--accent-d); }
+.lrow .x{ flex:0 0 auto; width:38px; height:42px; border-radius:10px; background:var(--chip); color:var(--danger); font-size:18px; }
+.belegline{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); margin:-2px 2px 10px 2px; }
+.belegline .rm{ color:var(--danger); }
+.sumbar{ display:flex; justify-content:space-between; font-weight:700; font-size:16px; padding:10px 2px; border-top:2px solid var(--line); margin-top:6px; }
+
+/* Segmentierte Umschalter (z. B. Ja/Nein) */
+.seg{ display:flex; background:var(--chip); border-radius:11px; padding:3px; gap:3px; }
+.seg button{ flex:1; padding:9px; border-radius:9px; font-size:14px; color:var(--muted); }
+.seg button.on{ background:var(--card); color:var(--text); font-weight:600; box-shadow:var(--shadow); }
+
+/* Toast (kurze Rückmeldung) */
+.toast{ position:fixed; bottom:calc(74px + var(--safe-b)); left:50%; transform:translateX(-50%); z-index:80; background:#16191d; color:#fff; padding:10px 16px; border-radius:10px; font-size:14px; box-shadow:var(--shadow); opacity:0; transition:opacity .2s; max-width:90%; text-align:center; }
+.toast.show{ opacity:.96; }
+
+/* Hinweis-Box (Warnung / OK) */
+.note{ background:var(--warn-bg); color:var(--warn); border-radius:10px; padding:10px 12px; font-size:13px; margin:8px 0; }
+.note.ok{ background:var(--ok-bg); color:var(--ok); }
+
+/* Fortschritt + Fahrten-Liste */
+.progress{ height:8px; background:var(--chip); border-radius:5px; overflow:hidden; margin:6px 0 12px; }
+.progress > div{ height:100%; background:var(--accent); width:0; }
+.tripitem{ display:flex; align-items:center; gap:10px; padding:13px; border:1px solid var(--line); border-radius:14px; background:var(--card); margin-bottom:9px; }
+.tripitem.active{ border-color:var(--accent); background:var(--accent-l); }
+.tripitem .meta{ flex:1; min-width:0; } .tripitem .nm{ font-weight:600; }
+.tripitem .tdel{ color:var(--danger); font-size:18px; padding:6px 8px; width:auto; flex:0 0 auto; }
+
+/* ---------- 11. „Zum Home-Bildschirm"-Hinweis (PWA-Installation) ---------- */
+.a2hs{ position:fixed; left:10px; right:10px; bottom:calc(12px + var(--safe-b)); z-index:90;
+  background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow);
+  padding:12px 14px; display:flex; align-items:flex-start; gap:10px; max-width:740px; margin:0 auto;
+  animation:a2hs-in .25s ease; }
+.a2hs .ic{ font-size:22px; line-height:1.2; }
+.a2hs .tx{ flex:1; font-size:13.5px; line-height:1.5; }
+.a2hs .tx b{ color:var(--accent-d); }
+.a2hs .cl{ flex:0 0 auto; color:var(--muted); font-size:20px; padding:0 4px; align-self:center; }
+@keyframes a2hs-in{ from{ transform:translateY(12px); opacity:0; } to{ transform:translateY(0); opacity:1; } }

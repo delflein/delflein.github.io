@@ -1,0 +1,17 @@
+{
+  "name": "Feierreisen Busbegleiter",
+  "short_name": "Busbegleiter",
+  "description": "Digitaler Helfer für Busbegleiter: Teilnehmerliste, Check-in mit Unterschrift, Sitzplätze und Formular-Export – komplett offline auf dem Gerät.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f5f7",
+  "theme_color": "#0e7c66",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
