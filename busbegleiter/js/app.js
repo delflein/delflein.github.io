@@ -50,7 +50,7 @@ export function updateTabBadges() {
   const t = T();
   if (!t || !t.participants.length) return;
   const fehlt = t.participants.filter(p => ui().leg === 'rueck' ? !p.rueckAnwesend : !p.anwesend).length;
-  const seats = t.participants.filter(p => !p.sitzplatz).length;
+  const seats = t.participants.filter(p => p.anwesend && !p.sitzplatz).length;
   const add = (tab, n) => { if (!n) return; const btn = tb.querySelector('button[data-tab="' + tab + '"]'); const s = document.createElement('span'); s.className = 'badge'; s.textContent = n > 99 ? '99+' : n; btn.appendChild(s); };
   add('teilnehmer', fehlt);
   add('sitz', seats);

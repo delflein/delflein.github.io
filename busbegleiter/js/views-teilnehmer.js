@@ -261,7 +261,13 @@ function togglePay(p) {
 
 export function viewSitz() {
   const d = elFromHTML('<div></div>');
-  const ps = T().participants;
+  // Nur eingecheckte Personen: Abgemeldete, No-Shows und noch nicht Erschienene
+  // brauchen keinen Sitzplatz (Issue #6).
+  const ps = T().participants.filter(p => p.anwesend);
+  if (!ps.length) {
+    d.innerHTML = '<div class="welcome"><div class="tlogo">💺</div><h2 style="margin:0 0 6px">Sitzplätze</h2><p class="muted" style="margin:0">Keine Person bisher eingecheckt.<br>Sitzplätze werden nur für eingecheckte Gäste erfasst.</p></div>';
+    return d;
+  }
   const done = ps.filter(p => p.sitzplatz).length;
   const pct = ps.length ? Math.round(done / ps.length * 100) : 0;
   const q = ui().seatSearch || '';
@@ -301,7 +307,7 @@ export function viewSitz() {
 /** Eine Sitzplan-Zeile mit Nummern-Eingabe. */
 function seatRow(p, onChange) {
   const c = elFromHTML('<div class="pcard"></div>');
-  c.innerHTML = '<div class="top" style="align-items:center"><div class="nrbadge">' + p.nr + '</div><div style="flex:1;min-width:0"><div class="pname" style="font-size:15px">' + esc(p.name) + '</div><div class="tiny muted">📍 ' + esc(p.abfahrtsort || '') + (p.anwesend ? ' · an Bord' : ' · <span style="color:var(--warn)">fehlt noch</span>') + '<span class="dupw" style="color:var(--danger);font-weight:600;display:none"> · ⚠️ doppelt</span></div></div><input class="seatinp" inputmode="numeric" placeholder="Sitz" value="' + esc(p.sitzplatz) + '" style="width:74px;text-align:center;font-size:17px;font-weight:700;padding:11px 6px;border:2px solid var(--line);background:var(--card)"></div>';
+  c.innerHTML = '<div class="top" style="align-items:center"><div class="nrbadge">' + p.nr + '</div><div style="flex:1;min-width:0"><div class="pname" style="font-size:15px">' + esc(p.name) + '</div><div class="tiny muted">📍 ' + esc(p.abfahrtsort || '') + '<span class="dupw" style="color:var(--danger);font-weight:600;display:none"> · ⚠️ doppelt</span></div></div><input class="seatinp" inputmode="numeric" placeholder="Sitz" value="' + esc(p.sitzplatz) + '" style="width:74px;text-align:center;font-size:17px;font-weight:700;padding:11px 6px;border:2px solid var(--line);background:var(--card)"></div>';
   const inp = c.querySelector('.seatinp');
   const warn = c.querySelector('.dupw');
   inp.oninput = () => { p.sitzplatz = inp.value.trim(); save(); updateTabBadges(); onChange && onChange(); };
