@@ -41,12 +41,13 @@ a.pact{ touch-action:manipulation; }
 .hidden{ display:none!important; }
 
 /* ---------- 3. Formular-Elemente ---------- */
-input:not([type=checkbox]):not([type=radio]),select,textarea{
+/* :where() hält die Spezifität bei 0,0,1, damit Klassen-Overrides (z. B. .search input) greifen. */
+input:where(:not([type=checkbox]):not([type=radio])),select,textarea{
   font:inherit; color:var(--text); background:var(--card);
   border:1px solid var(--line); border-radius:10px; padding:10px 11px; outline:none; width:100%;
 }
 input::placeholder,textarea::placeholder{ color:var(--muted); opacity:1; }
-input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{ border-color:var(--accent); }
+input:where(:not([type=checkbox]):not([type=radio])):focus,select:focus,textarea:focus{ border-color:var(--accent); }
 
 /* ---------- 4. App-Leiste (Kopf) ---------- */
 .app-bar{
