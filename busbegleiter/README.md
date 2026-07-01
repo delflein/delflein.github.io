@@ -1,6 +1,6 @@
-# Feierreisen Busbegleiter
+# Busbegleiter
 
-Ein digitaler Helfer für Busbegleiter auf Feierreisen-Fahrten – als installierbare
+Ein digitaler Helfer für Busbegleiter auf Fahrten – als installierbare
 **Progressive Web App (PWA)**, die **komplett offline auf dem Gerät** läuft. Keine
 Server, keine externen Requests mit Daten, DSGVO-freundlich: alles bleibt lokal
 (IndexedDB + geräteinterner Cache).
@@ -11,7 +11,7 @@ Live: `https://delflein.github.io/busbegleiter/`
 
 ## Was die App kann
 
-- **Teilnehmerliste importieren** – die PDF von Feierreisen wird automatisch
+- **Teilnehmerliste importieren** – die PDF wird automatisch
   eingelesen (Gäste, Buchungen, Bezahlt-Status), auch bei wechselnden
   Spaltenlayouts.
 - **Einchecken mit Unterschrift** – Fingerunterschrift im Querformat, direkt auf
@@ -58,7 +58,7 @@ js/
 assets/
   vendor/               lokal gebündelte Bibliotheken (offline!)
                         pdf.js, jsPDF (+autotable), pdf-lib
-  vorlage-formulare.pdf Original-Feierreisen-Formulare (werden bestempelt)
+  vorlage-formulare.pdf Original-Formulare (werden bestempelt)
   icons/                App-Icons (Homescreen / Manifest)
 ```
 
@@ -78,7 +78,7 @@ die Funktionen erst zur Laufzeit aufgerufen werden, nicht beim Laden.
 
 ## Der Parser (Herzstück)
 
-Feierreisen-Listen haben **unterschiedliche Spaltenlayouts**. Statt feste Spalten
+Listen haben **unterschiedliche Spaltenlayouts**. Statt feste Spalten
 anzunehmen, erkennt der Parser die Spaltengrenzen **pro PDF aus der Kopfzeile**
 (`detectHeaderBounds`) und tolerentiert Namensvarianten (`AbfahrtOrt` vs.
 `Abfahrtsort`, `Beutel`/`Extras` vs. `Sondergepäck`, …).
