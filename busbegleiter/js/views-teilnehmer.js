@@ -186,7 +186,7 @@ export function openDetail(p) {
     '<div class="field"><label>Teilnehmer-Nr. (aus Liste)</label><input id="nrInp" inputmode="numeric" value="' + esc(String(p.nr)) + '"></div>' +
     (sug ? ('<div class="note" id="nrSug">⚠️ Nr. <b>' + p.nr + '</b> kommt doppelt vor – laut Reihenfolge sollte das <b>Nr. ' + sug + '</b> sein. <button class="linkbtn" id="nrFix" style="margin-left:2px;font-weight:600">→ auf ' + sug + ' setzen</button></div>') : '') +
     (!p.bezahlt && b && b.handy ? ('<a class="btn out" href="' + telHref(b.handy) + '" style="margin-bottom:14px">💶 Bucher ' + esc(p.bucher) + ' anrufen (Geld)</a>') : '') +
-    '<div class="row" style="gap:8px;margin-bottom:14px"><a class="btn sec" style="flex:1" href="' + telHref(p.handy) + '">📞 Anrufen</a>' + (normPhone(p.handy) ? '<a class="btn sec" style="flex:1" href="' + waHref(p.handy, '') + '" target="_blank" rel="noopener">💬 WhatsApp</a>' : '') + '</div><div class="field"><label>Sitzplatz-Nr.</label><input id="seatInp" inputmode="numeric" placeholder="z. B. 14" value="' + esc(p.sitzplatz) + '"></div><div class="field"><label>Kommentar</label><textarea id="cmtInp" placeholder="Notiz …">' + esc(p.kommentar || '') + '</textarea></div><div class="sectitle">✍︎ Unterschrift / Check-in</div><div id="sigThumb"></div><button class="btn out" id="sigBtn" style="margin-top:6px">✍︎ Unterschrift erfassen</button><button class="btn" id="checkInBtn" style="margin-top:10px"></button><button class="btn sec" id="rueckBtn" style="margin-top:8px"></button><div class="sectitle">Status</div><div class="seg" id="statusSeg"><button data-s="">Aktiv</button><button data-s="abgemeldet">Abgemeldet</button><button data-s="nicht_angetreten">Nicht angetr.</button></div><button class="btn sec" id="rmP" style="margin-top:18px;color:var(--danger)">🗑 Teilnehmer entfernen</button>';
+    '<div class="row" style="gap:8px;margin-bottom:14px"><a class="btn sec" style="flex:1" href="' + telHref(p.handy) + '">📞 Anrufen</a>' + (normPhone(p.handy) ? '<a class="btn sec" style="flex:1" href="' + waHref(p.handy, '') + '" target="_blank" rel="noopener">💬 WhatsApp</a>' : '') + '</div><div class="field"><label>Sitzplatz-Nr.</label><input id="seatInp" inputmode="numeric" placeholder="z. B. 14" value="' + esc(p.sitzplatz) + '"></div><div class="field"><label>Kommentar</label><textarea id="cmtInp" placeholder="Notiz …">' + esc(p.kommentar || '') + '</textarea></div><div class="sectitle">✍︎ Unterschrift / Check-in</div><div id="sigThumb"></div><button class="btn out" id="sigBtn" style="margin-top:6px">✍︎ Unterschrift erfassen</button><button class="btn" id="checkInBtn" style="margin-top:10px"></button><button class="btn sec" id="rueckBtn" style="margin-top:8px"></button><div class="sectitle">Status</div><div class="seg" id="statusSeg"><button data-s="">Aktiv</button><button data-s="abgemeldet">Abgemeldet</button><button data-s="nicht_angetreten">Nicht angetr.</button></div><button class="btn out" id="nameChg" style="margin-top:18px">↔︎ Namensänderung (neuer Gast)</button><button class="btn sec" id="rmP" style="margin-top:8px;color:var(--danger)">🗑 Teilnehmer entfernen</button>';
   const pg = openPage(esc(p.name) + ' · Nr ' + p.nr, n);
 
   // Nummer ändern (manuell oder per Vorschlag).
@@ -233,6 +233,26 @@ export function openDetail(p) {
   const updSeg = () => seg.querySelectorAll('button').forEach(bx => bx.classList.toggle('on', (bx.dataset.s || '') === (p.status || '')));
   seg.querySelectorAll('button').forEach(bx => bx.onclick = () => { p.status = bx.dataset.s; save(); updSeg(); });
   updSeg();
+  // Namensänderung: alter Gast wird gestrichen (abgemeldet), der neue erbt die
+  // Buchung, bekommt die nächste freie Nummer und landet automatisch auf der
+  // Namensänderungsliste (Formulare). Issue #2.
+  n.querySelector('#nameChg').onclick = () => {
+    const s = elFromHTML('<div></div>');
+    s.innerHTML = '<h2>Namensänderung</h2><p class="muted" style="margin:0 2px 14px">„' + esc(p.name) + '" (Nr ' + p.nr + ') wird gestrichen und durch einen neuen Gast ersetzt. Der Eintrag landet automatisch auf der Namensänderungsliste (5,00 €), der neue Gast erhält die nächste freie Nummer.</p><div class="field"><label>Name des neuen Gastes *</label><input id="ncName"></div><div class="field" style="margin-bottom:14px"><label>Handynummer</label><input id="ncHandy" inputmode="tel" placeholder="z. B. 0176…"></div><button class="btn" id="ncOk">↔︎ Namensänderung durchführen</button>';
+    const bg = openSheet(s);
+    s.querySelector('#ncOk').onclick = () => {
+      const name = s.querySelector('#ncName').value.trim();
+      if (!name) { toast('Bitte den Namen des neuen Gastes eingeben'); return; }
+      const handy = s.querySelector('#ncHandy').value.trim();
+      const t = T();
+      const nr = t.participants.reduce((m, x) => Math.max(m, x.nr || 0), 0) + 1;
+      t.forms.aenderungen.push({ altNr: String(p.nr), altName: p.name, altHandy: p.handy || '', neuNr: String(nr), neuName: name, neuHandy: handy });
+      t.participants.push({ nr, name, handy, abfahrtsort: p.abfahrtsort || '', ticket: p.ticket || '', skat: '', sondergepaeck: p.sondergepaeck || '', camp: !!p.camp, kommentar: 'Namensänderung von ' + p.name + ' (Nr ' + p.nr + ')', buchungId: p.buchungId, bucher: p.bucher || p.name, istBucher: false, bezahlt: !!p.bezahlt, anwesend: false, rueckAnwesend: false, sitzplatz: '', signature: null, status: '', manuell: true, page: null });
+      p.status = 'abgemeldet'; p.anwesend = false; p.rueckAnwesend = false;
+      p.kommentar = ((p.kommentar || '') + ' Namensänderung → ' + name + ' (Nr ' + nr + ')').trim();
+      save(); bg._close(); pg._close(); toast('Namensänderung: ' + name + ' erhält Nr ' + nr);
+    };
+  };
   n.querySelector('#rmP').onclick = () => {
     confirmSheet({
       title: 'Teilnehmer entfernen?',

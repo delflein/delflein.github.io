@@ -180,9 +180,9 @@ export async function generatePDF(opts) {
   }
   // --- Formular 4: Namensänderungen & Neubucher (links alt, rechts neu) ---
   const NBT = [51, 158, 265, 372, 479], NOFF = { nr: 0, name: 14, strasse: 29, plzort: 43, geb: 58, handy: 72, email: 87 };
-  function stampNamen(pg, font) {
-    f.aenderungen.forEach((e, i) => {
-      if (i >= 5) return; const b = NBT[i]; const a = (x, off, v) => aL(pg, x, b + off - 3, v || '', 10, font);
+  function stampNamen(pg, font, from) {
+    f.aenderungen.slice(from || 0, (from || 0) + 5).forEach((e, i) => {
+      const b = NBT[i]; const a = (x, off, v) => aL(pg, x, b + off - 3, v || '', 10, font);
       a(161, NOFF.nr, e.altNr); a(161, NOFF.name, e.altName); a(161, NOFF.strasse, e.altStrasse); a(161, NOFF.plzort, e.altPlzOrt); a(161, NOFF.geb, e.altGeb); a(161, NOFF.handy, e.altHandy); a(161, NOFF.email, e.altEmail);
       a(544, NOFF.nr, e.neuNr); a(544, NOFF.name, e.neuName); a(544, NOFF.strasse, e.neuStrasse); a(544, NOFF.plzort, e.neuPlzOrt); a(544, NOFF.geb, e.neuGeb); a(544, NOFF.handy, e.neuHandy); a(544, NOFF.email, e.neuEmail);
     });
@@ -287,7 +287,10 @@ export async function generatePDF(opts) {
       // Vier Unterschriften auf der Checkliste (Hin/Rück × Begleiter/Fahrer).
       const SIGL = { hinBegleiter: [178, 304, 311], hinFahrer: [314, 385, 311], rueckBegleiter: [178, 304, 442], rueckFahrer: [313, 385, 442] };
       for (const kk in SIGL) { const sd = (f.checkSig || {})[kk]; if (!sd) continue; const x0 = SIGL[kk][0], x1 = SIGL[kk][1], top = SIGL[kk][2]; try { const sp = await doc1.embedPng(sd); const maxH = 18, maxW = (x1 - x0) - 4; let hh = maxH, ww = (sp.width / sp.height) * hh; if (ww > maxW) { ww = maxW; hh = (sp.height / sp.width) * ww; } clp.drawImage(sp, { x: x0 + 2, y: clp.getHeight() - (top + 9) + 1, width: ww, height: hh }); } catch (e) {} }
-      if (f.aenderungen && f.aenderungen.length) stampNamen(await copyFormPage(doc1, 3), cf);
+      // Je 5 Einträge pro Formularseite – bei mehr wird die Seite erneut angehängt.
+      if (f.aenderungen && f.aenderungen.length) {
+        for (let from = 0; from < f.aenderungen.length; from += 5) stampNamen(await copyFormPage(doc1, 3), cf, from);
+      }
     } else {
       const cb = await PDFDocument.load(fbDoc('check')); const cp = await doc1.copyPages(cb, cb.getPageIndices()); cp.forEach(pg => doc1.addPage(pg));
     }

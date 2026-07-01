@@ -213,7 +213,7 @@ export function viewBericht() {
 function renderNamen() {
   const f = T().forms;
   const d = elFromHTML('<div></div>');
-  d.appendChild(elFromHTML('<p class="tiny muted">Pro Eintrag: links der <b>alte Bucher</b> (Name, TN-Nr., Handy), rechts die Daten des <b>neuen Gastes</b>. 5,00 € pro Änderung.</p>'));
+  d.appendChild(elFromHTML('<p class="tiny muted">Pro Eintrag: links der <b>alte Bucher</b> (Name, TN-Nr., Handy), rechts die Daten des <b>neuen Gastes</b>. 5,00 € pro Änderung. Ab 6 Einträgen hängt der Export automatisch eine weitere Formularseite an.</p>'));
   const list = elFromHTML('<div></div>');
   function draw() {
     list.innerHTML = '';
@@ -238,7 +238,7 @@ function renderNamen() {
       list.appendChild(c);
     });
     const add = elFromHTML('<button class="btn sec">+ Änderung / Neubucher</button>');
-    add.onclick = () => { if (f.aenderungen.length >= 5) { toast('Max. 5 pro Formularseite'); return; } f.aenderungen.push({}); save(); draw(); };
+    add.onclick = () => { f.aenderungen.push({}); save(); draw(); };
     list.appendChild(add);
   }
   draw();
