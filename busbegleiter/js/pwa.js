@@ -28,8 +28,41 @@ function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   // Nach dem Laden registrieren, damit der erste Start nicht ausgebremst wird.
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW-Registrierung fehlgeschlagen:', err));
+    navigator.serviceWorker.register('./sw.js')
+      .then(watchForUpdates)
+      .catch(err => console.warn('SW-Registrierung fehlgeschlagen:', err));
   });
+}
+
+/**
+ * Update-Hinweis: Die App lädt cache-first, ein Update wird also erst beim
+ * ÜBERNÄCHSTEN Start sichtbar. Sobald der neue Service Worker aktiv ist,
+ * bieten wir stattdessen sofort „Neu laden" an.
+ */
+function watchForUpdates(reg) {
+  // Beim Zurückholen in den Vordergrund nach Updates suchen (sonst nur beim Start).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') reg.update().catch(() => {});
+  });
+  const hadController = !!navigator.serviceWorker.controller;
+  reg.addEventListener('updatefound', () => {
+    const nw = reg.installing;
+    if (!nw || !hadController) return; // Erstinstallation → kein Hinweis nötig
+    nw.addEventListener('statechange', () => { if (nw.state === 'activated') showUpdateBanner(); });
+  });
+}
+
+let _updBanner = null;
+
+function showUpdateBanner() {
+  if (_updBanner) return;
+  _updBanner = elFromHTML(
+    '<div class="a2hs"><div class="ic">🔄</div><div class="tx"><b>Update geladen.</b> Einmal neu laden, um die neue Version zu nutzen.' +
+    '<div style="margin-top:8px"><button class="btn" id="updReload" style="width:auto;padding:8px 16px">Jetzt neu laden</button></div></div>' +
+    '<button class="cl" title="Später">✕</button></div>');
+  document.body.appendChild(_updBanner);
+  _updBanner.querySelector('#updReload').onclick = () => location.reload();
+  _updBanner.querySelector('.cl').onclick = () => { _updBanner.remove(); _updBanner = null; };
 }
 
 function setupInstallHint() {
