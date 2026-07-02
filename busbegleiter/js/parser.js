@@ -58,17 +58,29 @@ function isHeaderRow(row) {
  * @returns {object|null} bounds-Objekt oder null, wenn keine Kopfzeile gefunden
  */
 function detectHeaderBounds(rows) {
-  for (const r of rows) {
+  for (let ri = 0; ri < rows.length; ri++) {
+    const r = rows[ri];
     if (!isHeaderRow(r)) continue;
+    // Umbrochene Labels (z. B. „Unterschrift/Sitzpla" + „tz" auf zwei Zeilen)
+    // landen in Nachbarzeilen → für die Label-Suche mit einbeziehen.
+    const headerY = r[0].y;
+    const near = [];
+    [rows[ri - 1], rows[ri + 1]].forEach(nr => {
+      if (nr && nr.length && Math.abs(nr[0].y - headerY) <= 24) near.push.apply(near, nr);
+    });
+    const cand = r.concat(near);
     const b = { nr: 14 };
     for (const [key, re] of LABELMAP) {
-      const it = r.find(i => re.test(i.s.trim()));
+      const it = cand.find(i => re.test(i.s.trim()));
       if (it && b[key] == null) b[key] = Math.round(it.x) - 3;
     }
     b.end = Math.round(Math.max.apply(null, r.map(i => i.x))) + 90;
     // Nur akzeptieren, wenn die beiden Pflichtspalten erkannt wurden.
     if (b.name != null && b.handy != null) {
       if (b.name <= b.nr) b.nr = Math.max(0, b.name - 24); // Nummer-Spalte links vom Namen halten
+      // Unterschrift-Spalte notfalls schätzen (liegt zwischen Name und Handy) –
+      // sonst würden Unterschrift & Sitzplatz später mit NaN-Koordinaten gestempelt.
+      if (b.sitzplatz == null) b.sitzplatz = Math.max(b.name + 60, b.handy - 105);
       return b;
     }
   }

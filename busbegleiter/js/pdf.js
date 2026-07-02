@@ -195,11 +195,15 @@ export async function generatePDF(opts) {
     for (const p of t.participants) {
       if (p.page == null || !pgs[p.page]) continue;
       const pg = pgs[p.page];
-      const cw = (p.sx1 - p.sx0) || 120;
+      // Fallback für Altdaten, deren Import die Unterschrift-Spalte nicht erkannt
+      // hat (sx0/sx1 = NaN) – sonst scheitert das Stempeln still im catch.
+      const sx1 = isFinite(p.sx1) ? p.sx1 : 271;
+      const sx0 = isFinite(p.sx0) ? p.sx0 : sx1 - 105;
+      const cw = (sx1 - sx0) || 120;
       const cellBot = p.y - 3, cellH = 29; // weiße Teilnehmer-Zelle, Zeilenhöhe 29pt
-      if (p.signature) { try { const png = await doc.embedPng(p.signature); const maxH = 26, maxW = cw - 30; let h = maxH, w = (png.width / png.height) * h; if (w > maxW) { w = maxW; h = (png.height / png.width) * w; } pg.drawImage(png, { x: p.sx0 + 3, y: cellBot + (cellH - h) / 2, width: w, height: h }); } catch (e) {} }
-      if (p.sitzplatz) { try { pg.drawText(p.sitzplatz, { x: p.sx1 - 22, y: cellBot + 9, size: 11, font, color: col }); } catch (e) {} }
-      if (!p.signature && p.status) { try { pg.drawText(p.status === 'abgemeldet' ? 'abgemeldet' : 'nicht angetreten', { x: p.sx0 + 4, y: cellBot + 10, size: 8, font, color: red }); } catch (e) {} }
+      if (p.signature) { try { const png = await doc.embedPng(p.signature); const maxH = 26, maxW = cw - 30; let h = maxH, w = (png.width / png.height) * h; if (w > maxW) { w = maxW; h = (png.height / png.width) * w; } pg.drawImage(png, { x: sx0 + 3, y: cellBot + (cellH - h) / 2, width: w, height: h }); } catch (e) {} }
+      if (p.sitzplatz) { try { pg.drawText(p.sitzplatz, { x: sx1 - 22, y: cellBot + 9, size: 11, font, color: col }); } catch (e) {} }
+      if (!p.signature && p.status) { try { pg.drawText(p.status === 'abgemeldet' ? 'abgemeldet' : 'nicht angetreten', { x: sx0 + 4, y: cellBot + 10, size: 8, font, color: red }); } catch (e) {} }
     }
     // Nachträglich manuell hinzugefügte Teilnehmer unten anhängen.
     const man = t.participants.filter(p => p.manuell);
