@@ -5,7 +5,7 @@
 
 import { CHECK_HIN, CHECK_RUECK } from './config.js';
 import { $, elFromHTML, toast, pickFile, fileToBeleg } from './dom.js';
-import { esc, money, sumItems, busTagOf, evTagOf, eurTag, safeTag } from './util.js';
+import { esc, money, sumItems, busTagOf, evTagOf, eurTag, safeTag, waHref, normPhone, statusLabel } from './util.js';
 import { state, T, save } from './state.js';
 import { openPage, askSheet } from './overlay.js';
 import { openSignaturePad } from './signature.js';
@@ -321,12 +321,38 @@ export function viewAbschluss() {
   return d;
 }
 
-/** Gruppen-Einladungslink (mit Vorlagentext) teilen. */
+/**
+ * Gruppen-Einladungslink verschicken: WhatsApp kennt keinen Mehrfach-Versand,
+ * darum eine Abhak-Liste – pro Teilnehmer ein Tap, der den Chat mit fertigem
+ * Text öffnet. Gesendete werden am Teilnehmer markiert (p.waInviteSent).
+ */
 function shareInvite() {
   const t = T();
   const link = t.groupInvite;
   if (!link) { toast('Bitte oben den Gruppenlink dieser Fahrt eintragen'); return; }
   const text = (state.settings.waTemplate || '{invite}').replace('{invite}', link);
-  if (navigator.share) { navigator.share({ text }).catch(() => {}); }
-  else { window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank'); }
+  const ps = t.participants.filter(p => normPhone(p.handy));
+  const ohne = t.participants.length - ps.length;
+
+  const d = elFromHTML('<div></div>');
+  const counter = elFromHTML('<div class="note" style="margin-bottom:12px"></div>');
+  const updCounter = () => {
+    const sent = ps.filter(p => p.waInviteSent).length;
+    counter.className = 'note' + (ps.length && sent === ps.length ? ' ok' : '');
+    counter.textContent = sent + ' / ' + ps.length + ' gesendet' + (ohne ? ' · ' + ohne + ' ohne Handynummer' : '');
+  };
+  updCounter();
+  d.appendChild(counter);
+  if (!ps.length) d.appendChild(elFromHTML('<div class="note">Kein Teilnehmer hat eine Handynummer hinterlegt.</div>'));
+
+  ps.forEach(p => {
+    const st = statusLabel(p.status);
+    const row = elFromHTML('<div class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:8px"><div style="flex:1;min-width:0"><div class="bold" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(p.name) + '</div><div class="tiny muted">' + esc(p.handy) + (st ? ' · ' + st : '') + '</div></div><a class="btn sec" style="flex:0 0 auto;padding:8px 14px" href="' + waHref(p.handy, text) + '" target="_blank" rel="noopener"></a></div>');
+    const btn = row.querySelector('a');
+    const paint = () => { btn.textContent = p.waInviteSent ? '✓ Erneut' : '💬 Senden'; btn.style.opacity = p.waInviteSent ? '0.6' : ''; };
+    paint();
+    btn.onclick = () => { p.waInviteSent = true; save(); paint(); updCounter(); };
+    d.appendChild(row);
+  });
+  openPage('💬 Gruppenlink senden', d);
 }
