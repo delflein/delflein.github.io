@@ -7,10 +7,11 @@ import { CHECK_HIN, CHECK_RUECK } from './config.js';
 import { $, elFromHTML, toast, pickFile, fileToBeleg } from './dom.js';
 import { esc, money, sumItems, busTagOf, evTagOf, eurTag, safeTag } from './util.js';
 import { state, T, save } from './state.js';
-import { openPage } from './overlay.js';
+import { openPage, askSheet } from './overlay.js';
 import { openSignaturePad } from './signature.js';
 import { generatePDF } from './pdf.js';
 import { openSettings } from './views-trips.js';
+import { setTab } from './app.js';
 
 /* ---------- Formular-Übersicht ---------- */
 
@@ -246,6 +247,49 @@ function renderNamen() {
   return d;
 }
 
+/* ---------- Vollständigkeits-Check vor dem Export (Issue #9) ---------- */
+
+/**
+ * Prüft die Formulare auf Lücken. Warnt nur – blockiert den Export nicht.
+ * @returns {Array<{label:string, go:Function}>} fehlende Punkte + Absprungziel
+ */
+function exportWarnings() {
+  const t = T(); const f = t.forms; const k = state.settings.konto;
+  const w = [];
+  const filled = v => !!(v || '').trim();
+  const goForm = () => setTab('formulare');
+  const goCheck = () => { setTab('formulare'); openPage('🚌 Bus-Checkliste', renderCheck()); };
+
+  // Auslagen: jeder benutzte Posten braucht einen Beleg …
+  const posten = f.auslagen.items.filter(it => filled(it.firma) || filled(it.betrag));
+  const ohneBeleg = posten.filter(it => !it.beleg).length;
+  if (ohneBeleg) w.push({ label: ohneBeleg + (ohneBeleg > 1 ? ' Auslagen' : ' Auslage') + ' ohne Beleg', go: goForm });
+  // … und Kontodaten für die Erstattung.
+  if (posten.length && (!filled(k.inhaber) || !filled(k.iban))) w.push({ label: 'Kontodaten für die Auslagenerstattung fehlen', go: openSettings });
+
+  // Bus-Checkliste: alle Felder (außer Bemerkungen) müssen ausgefüllt sein –
+  // notfalls mit „/". Das Feld „Eventname und Busnummer" füllt sich selbst.
+  const leer = CHECK_HIN.filter(l => l !== 'Eventname und Busnummer' && !filled(f.checkHin[l])).length
+             + CHECK_RUECK.filter(l => !filled(f.checkRueck[l])).length;
+  if (leer) w.push({ label: 'Bus-Checkliste: ' + leer + (leer > 1 ? ' Felder' : ' Feld') + ' leer', go: goCheck });
+
+  // Alle vier Unterschriften der Checkliste.
+  const sig = [['hinBegleiter', 'Busbegleiter Hin'], ['hinFahrer', 'Busfahrer Hin'], ['rueckBegleiter', 'Busbegleiter Rück'], ['rueckFahrer', 'Busfahrer Rück']].filter(x => !f.checkSig[x[0]]);
+  if (sig.length) w.push({ label: 'Unterschrift fehlt: ' + sig.map(x => x[1]).join(', '), go: goCheck });
+
+  // Namensänderungen: Feierreisen braucht die vollen Daten des neuen Gastes.
+  const REQ = ['altNr', 'altName', 'neuNr', 'neuName', 'neuStrasse', 'neuPlzOrt', 'neuGeb', 'neuHandy'];
+  const unvoll = f.aenderungen.filter(e => REQ.some(key => !filled(e[key]))).length;
+  if (unvoll) w.push({ label: unvoll + (unvoll > 1 ? ' Namensänderungen' : ' Namensänderung') + ' unvollständig', go: goForm });
+
+  // No-Show-Liste kürzer als Abgemeldete + Nicht-Angetretene (Anzahl reicht als Signal).
+  const absent = t.participants.filter(p => p.status).length;
+  const noshows = f.noshows.filter(x => filled(x.name) || filled(x.nr)).length;
+  if (noshows < absent) w.push({ label: 'No-Show-Liste (' + noshows + ') kürzer als Abgemeldete/Nicht-Angetretene (' + absent + ')', go: goForm });
+
+  return w;
+}
+
 /* ---------- Abschluss / Export ---------- */
 export function viewAbschluss() {
   const t = T();
@@ -260,7 +304,16 @@ export function viewAbschluss() {
     '<button class="btn" id="genPdf">📤 3 PDFs erstellen & alle teilen</button><div class="tiny muted" style="margin:8px 2px 16px;line-height:1.55">Teilt 3 Dateien gemeinsam (z. B. WeTransfer):<br>① ' + esc(busTagOf(t) + '_' + evTagOf(t) + '_Checkliste_Teilnehmer.pdf') + '<br>② ' + esc(busTagOf(t) + '_' + evTagOf(t) + '_Auslagen_' + eurTag(sumItems(t.forms.auslagen.items)) + '.pdf') + '<br>③ ' + esc(busTagOf(t) + '_' + evTagOf(t) + '_' + (safeTag(state.settings.betreuer) || 'Begleiter') + '_Einnahmen_' + eurTag(sumItems(t.forms.einnahmen.items)) + '.pdf') + '</div>' +
     '<div class="field"><label>WhatsApp-Gruppenlink (diese Fahrt)</label><input id="grpLink" placeholder="https://chat.whatsapp.com/…" value="' + esc(t.groupInvite || '') + '"></div>' +
     '<button class="btn out" id="waAll">💬 Gruppenlink an alle senden</button>';
-  d.querySelector('#genPdf').onclick = () => generatePDF();
+  d.querySelector('#genPdf').onclick = () => {
+    const warns = exportWarnings();
+    if (!warns.length) { generatePDF(); return; }
+    askSheet({
+      title: 'Es fehlt noch etwas',
+      text: 'Tippe einen Punkt, um ihn zu vervollständigen – oder exportiere trotzdem.',
+      buttons: warns.map(x => ({ label: '⚠️ ' + x.label, cls: 'sec', onTap: x.go }))
+        .concat([{ label: '📤 Trotzdem exportieren', onTap: () => generatePDF() }]),
+    });
+  };
   d.querySelector('#grpLink').oninput = e => { t.groupInvite = e.target.value.trim(); save(); };
   d.querySelector('#waAll').onclick = () => shareInvite();
   const ri = d.querySelector('#reimp');

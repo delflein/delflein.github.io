@@ -20,6 +20,14 @@ import { render } from './app.js';
 /** Stapel offener Overlays (unterstes zuerst). */
 let _ovStack = [];
 
+/**
+ * Übergangs-Flag: Das nächste _openOverlay nutzt den bestehenden History-
+ * Eintrag weiter, statt einen neuen anzulegen. Für „Sheet schließen → sofort
+ * anderes Overlay öffnen" (sonst räumt das asynchrone history.back()/popstate
+ * das frisch geöffnete Overlay gleich wieder ab).
+ */
+let _reuseHistory = false;
+
 /** Overlay entfernen + optionale Aufräum-/After-Callbacks ausführen. */
 function _doClose(el) {
   if (el._cleanup) el._cleanup();
@@ -48,7 +56,8 @@ export function _openOverlay(el, after, cleanup, noPush) {
   document.body.appendChild(el);
   const first = _ovStack.length === 0;
   _ovStack.push(el);
-  if (first && !noPush) { try { history.pushState({ ov: 1 }, ''); } catch (e) {} }
+  if (first && !noPush && !_reuseHistory) { try { history.pushState({ ov: 1 }, ''); } catch (e) {} }
+  _reuseHistory = false;
 
   el._close = () => {
     const i = _ovStack.indexOf(el);
@@ -93,7 +102,13 @@ export function askSheet(opts) {
     btn.className = 'btn' + (b.cls ? ' ' + b.cls : '');
     btn.style.marginTop = '8px';
     btn.textContent = b.label;
-    btn.onclick = () => { bg._close(); if (b.onTap) b.onTap(); };
+    btn.onclick = () => {
+      const wasLast = _ovStack.length === 1;
+      bg._closeSilent();
+      if (b.onTap) { _reuseHistory = wasLast; b.onTap(); _reuseHistory = false; }
+      // Kein Folge-Overlay geöffnet → History-Eintrag jetzt abräumen.
+      if (wasLast && _ovStack.length === 0) { try { history.back(); } catch (e) {} }
+    };
     n.appendChild(btn);
   });
   return bg;
