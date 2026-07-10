@@ -28,7 +28,9 @@ function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   // Nach dem Laden registrieren, damit der erste Start nicht ausgebremst wird.
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
+    // updateViaCache:'none' – die Update-Prüfung von sw.js darf nie am
+    // HTTP-Cache (GitHub Pages: 10 min) hängen bleiben.
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
       .then(watchForUpdates)
       .catch(err => console.warn('SW-Registrierung fehlgeschlagen:', err));
   });

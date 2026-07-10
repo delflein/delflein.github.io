@@ -81,7 +81,9 @@ export function openSettings() {
   n.innerHTML = '<div class="field"><label>Dein Name (Busbegleiter)</label><input id="sBetreuer" value="' + esc(state.settings.betreuer) + '"></div>' +
     '<div class="sectitle">Kontodaten für Auslagenerstattung</div><p class="tiny muted" style="margin:-4px 0 8px">Einmal hinterlegen – gilt für alle Fahrten.</p>' +
     '<div class="field"><label>Kontoinhaber</label><input id="kInh" value="' + esc(k.inhaber) + '"></div><div class="field"><label>IBAN</label><input id="kIban" value="' + esc(k.iban) + '"></div><div class="field"><label>Bank</label><input id="kBank" value="' + esc(k.bank) + '"></div>' +
-    '<hr class="sep">' + (T() ? '<button class="btn sec" id="reimport">📄 Liste in „' + esc(T().name) + '" importieren</button>' : '') + '<p class="tiny muted" style="text-align:center;margin-top:14px">Alle Daten liegen nur lokal auf diesem Gerät (IndexedDB).</p>' +
+    '<hr class="sep">' + (T() ? '<button class="btn sec" id="reimport">📄 Liste in „' + esc(T().name) + '" importieren</button>' : '') +
+    '<button class="btn sec" id="updCheck" style="margin-top:8px">🔄 Auf Update prüfen</button>' +
+    '<p class="tiny muted" style="text-align:center;margin-top:14px">Alle Daten liegen nur lokal auf diesem Gerät (IndexedDB).</p>' +
     '<p class="tiny muted" id="verLine" style="text-align:center;margin-top:4px">App v' + APP.version + '</p>';
   const pg = openPage('⚙️ Einstellungen', n);
   n.querySelector('#sBetreuer').oninput = e => { state.settings.betreuer = e.target.value; save(); };
@@ -90,12 +92,42 @@ export function openSettings() {
   n.querySelector('#kBank').oninput = e => { k.bank = e.target.value; save(); };
   const ri = n.querySelector('#reimport');
   if (ri) ri.onclick = () => { pg._close(); $('#pdfInput').click(); };
-  // Sanity-Check: laufende JS-Version + aktiver SW-Cache. Weichen sie ab,
-  // ist ein Update installiert, aber die Seite noch nicht neu geladen.
+
+  // Diagnosezeile: laufende JS-Version · Service-Worker-Status · Cache-Version.
+  // Fehlt „Cache" oder steht „SW: fehlt", läuft die App ohne Offline-Modul und
+  // bekommt nie einen Update-Banner (lädt dann übers Netz + HTTP-Cache).
+  const vl = n.querySelector('#verLine');
+  const bits = ['App v' + APP.version];
+  const paint = () => { vl.textContent = bits.join(' · '); };
+  paint();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistration().then(reg => {
+      bits.push(!reg ? 'SW: fehlt' : 'SW: ' + (reg.active ? reg.active.state : (reg.installing ? 'installiert …' : 'wartet')) + (navigator.serviceWorker.controller ? '' : ' (steuert nicht)'));
+      paint();
+    }).catch(e => { bits.push('SW-Fehler: ' + (e && e.name)); paint(); });
+  } else { bits.push('SW: nicht verfügbar'); paint(); }
   if (window.caches) {
     caches.keys().then(keys => {
       const k = keys.filter(x => x.indexOf('busbegleiter-') === 0).sort().pop();
-      if (k) n.querySelector('#verLine').textContent = 'App v' + APP.version + ' · Cache ' + k.replace('busbegleiter-', '');
-    }).catch(() => {});
-  }
+      bits.push(k ? 'Cache ' + k.replace('busbegleiter-', '') : 'Cache: leer');
+      paint();
+    }).catch(e => { bits.push('Cache-Fehler: ' + (e && e.name)); paint(); });
+  } else { bits.push('Cache: nicht verfügbar'); paint(); }
+
+  // Manuell nach Updates suchen; registriert den SW neu, falls er fehlt.
+  n.querySelector('#updCheck').onclick = async () => {
+    if (!('serviceWorker' in navigator)) { toast('Service Worker nicht verfügbar'); return; }
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+        toast('Offline-Modul war nicht installiert – neu eingerichtet. Bitte App einmal neu starten.');
+        return;
+      }
+      toast('Prüfe auf Update …');
+      await reg.update();
+      if (reg.installing || reg.waiting) toast('Update wird geladen – gleich erscheint „Neu laden"');
+      else toast('App ist aktuell (v' + APP.version + ')');
+    } catch (e) { toast('Update-Prüfung fehlgeschlagen'); }
+  };
 }

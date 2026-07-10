@@ -9,7 +9,7 @@
  *  bei jedem Release zusammen mit CACHE_VERSION in sw.js hochzählen! */
 export const APP = {
   name: 'Busbegleiter',
-  version: '2.6.3',
+  version: '2.6.4',
   /** Original-Feierreisen-Formulare (Auslagen · Einnahmen · Checkliste · Namensänderung).
    *  Wird beim Export mit pdf-lib bestempelt. Liegt lokal im Repo → offline verfügbar. */
   formTemplateUrl: './assets/vorlage-formulare.pdf',
