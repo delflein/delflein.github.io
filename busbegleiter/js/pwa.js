@@ -32,6 +32,36 @@ export function initPWA() {
       if (k && k !== 'busbegleiter-v' + APP.version) showUpdateBanner();
     }).catch(() => {});
   }
+  // Download-Fortschritt des SW-Installs als Ladebalken anzeigen – nur bei
+  // Updates (controller vorhanden); die Erstinstallation läuft unsichtbar.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', e => {
+      const d = e.data;
+      if (!d || d.type !== 'bb-install-progress' || !navigator.serviceWorker.controller) return;
+      showInstallProgress(d.done, d.total);
+    });
+  }
+}
+
+let _progBanner = null;
+
+/** Banner mit Ladebalken: „Update wird geladen … n/m Dateien". */
+function showInstallProgress(done, total) {
+  if (_updBanner) return; // „Neu laden" ist schon da
+  if (!_progBanner) {
+    _progBanner = elFromHTML(
+      '<div class="a2hs upd"><div class="ic">⬇️</div><div class="tx"><b>Update wird geladen …</b>' +
+      '<div class="progress" style="margin:8px 0 4px"><div></div></div><div class="tiny muted" id="updPct"></div></div>' +
+      '<button class="cl" title="Ausblenden">✕</button></div>');
+    document.body.appendChild(_progBanner);
+    _progBanner.querySelector('.cl').onclick = () => { _progBanner.remove(); _progBanner = null; };
+  }
+  const pct = total ? Math.round(done / total * 100) : 0;
+  _progBanner.querySelector('.progress > div').style.width = pct + '%';
+  _progBanner.querySelector('#updPct').textContent = done + ' / ' + total + ' Dateien (' + pct + ' %)';
+  // Fertig geladen: kurz darauf übernimmt der „Neu laden"-Banner. Falls dessen
+  // Ereignis verloren geht (App-Wechsel …), nach kurzer Wartezeit selbst zeigen.
+  if (done >= total) setTimeout(() => { if (!_updBanner) showUpdateBanner(); }, 2500);
 }
 
 function registerServiceWorker() {
@@ -68,6 +98,7 @@ let _updBanner = null;
 
 function showUpdateBanner() {
   if (_updBanner) return;
+  if (_progBanner) { _progBanner.remove(); _progBanner = null; }
   _updBanner = elFromHTML(
     '<div class="a2hs upd"><div class="ic">🔄</div><div class="tx"><b>Update geladen.</b> Einmal neu laden, um die neue Version zu nutzen.' +
     '<div style="margin-top:8px"><button class="btn" id="updReload" style="width:auto;padding:8px 16px">Jetzt neu laden</button></div></div>' +
