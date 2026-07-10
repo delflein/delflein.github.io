@@ -84,7 +84,8 @@ export function openSettings() {
     '<hr class="sep">' + (T() ? '<button class="btn sec" id="reimport">📄 Liste in „' + esc(T().name) + '" importieren</button>' : '') +
     '<button class="btn sec" id="updCheck" style="margin-top:8px">🔄 Auf Update prüfen</button>' +
     '<p class="tiny muted" style="text-align:center;margin-top:14px">Alle Daten liegen nur lokal auf diesem Gerät (IndexedDB).</p>' +
-    '<p class="tiny muted" id="verLine" style="text-align:center;margin-top:4px">App v' + APP.version + '</p>';
+    '<p class="tiny muted" id="verLine" style="text-align:center;margin-top:4px">App v' + APP.version + '</p>' +
+    '<p class="tiny muted" id="vpLine" style="text-align:center;margin-top:2px"></p>';
   const pg = openPage('⚙️ Einstellungen', n);
   n.querySelector('#sBetreuer').oninput = e => { state.settings.betreuer = e.target.value; save(); };
   n.querySelector('#kInh').oninput = e => { k.inhaber = e.target.value; save(); };
@@ -113,6 +114,15 @@ export function openSettings() {
       paint();
     }).catch(e => { bits.push('Cache-Fehler: ' + (e && e.name)); paint(); });
   } else { bits.push('Cache: nicht verfügbar'); paint(); }
+
+  // Viewport-Diagnose: deckt Layout-Probleme wie die zu hohe Tab-Leiste auf
+  // (Body-Höhe vs. echte Bildschirmhöhe, unterer Safe-Area-Bereich).
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;height:env(safe-area-inset-bottom,0px);width:0;visibility:hidden';
+  document.body.appendChild(probe);
+  const safeB = Math.round(probe.getBoundingClientRect().height);
+  probe.remove();
+  n.querySelector('#vpLine').textContent = 'Body ' + Math.round(document.body.getBoundingClientRect().height) + ' · Viewport ' + window.innerHeight + ' · Screen ' + screen.height + ' · safe-b ' + safeB + 'px';
 
   // Manuell nach Updates suchen; registriert den SW neu, falls er fehlt.
   n.querySelector('#updCheck').onclick = async () => {

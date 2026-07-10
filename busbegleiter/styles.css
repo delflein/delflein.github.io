@@ -37,11 +37,12 @@ html,body{
 /* App-Shell: Die Seite selbst scrollt NIE – nur #main (.wrap). Kopf- und
    Tab-Leiste bleiben dadurch immer am Bildschirmrand, auch bei kurzem Inhalt
    oder offener Tastatur (Issue #13).
-   position:fixed statt height:100%/100dvh: In der installierten iOS-PWA
-   (Standalone) enden Viewport-Höhen oberhalb des Home-Indikators – nur
-   fixed-positionierte Boxen reichen zuverlässig bis zur Bildschirmunterkante
-   (so saß auch die alte Tab-Leiste). inset:0 pinnt den Body an alle 4 Kanten. */
-body{ position:fixed; inset:0; display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:none; }
+   Höhe – Achtung, iOS-Minenfeld: Im Safari-Browser passt 100dvh (folgt der
+   Toolbar). In der INSTALLIERTEN PWA (Standalone) ist 100vh der einzige Wert,
+   der ab Kaltstart bis unter den Home-Indikator reicht – 100%, 100dvh und
+   position:fixed+inset:0 enden dort alle oberhalb (getestet iOS 26). */
+body{ display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:none; height:100dvh; }
+@media (display-mode: standalone){ body{ height:100vh; } }
 button{ cursor:pointer; border:none; background:none; font:inherit; color:inherit; touch-action:manipulation; }
 a.pact{ touch-action:manipulation; }
 .hidden{ display:none!important; }
