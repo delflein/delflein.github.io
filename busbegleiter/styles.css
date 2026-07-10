@@ -220,6 +220,10 @@ hr.sep{ border:none; border-top:1px solid var(--line); margin:14px 0; }
   background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow);
   padding:12px 14px; display:flex; align-items:flex-start; gap:10px; max-width:740px; margin:0 auto;
   animation:a2hs-in .25s ease; }
+/* Update-Banner: ÜBER Sheets/Seiten (60) und Unterschrift-Pad (70) – er wird
+   oft aus den Einstellungen (einer Vollbild-Seite) heraus ausgelöst und wäre
+   mit z-index 45 dahinter unsichtbar. Nur der Toast (80) liegt noch darüber. */
+.a2hs.upd{ z-index:75; }
 .a2hs .ic{ font-size:22px; line-height:1.2; }
 .a2hs .tx{ flex:1; font-size:13.5px; line-height:1.5; }
 .a2hs .tx b{ color:var(--accent-d); }

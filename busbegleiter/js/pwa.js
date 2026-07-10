@@ -9,6 +9,7 @@
      Einmal weggewischt, erscheint der Hinweis nicht wieder (localStorage).
    ============================================================================= */
 
+import { APP } from './config.js';
 import { elFromHTML } from './dom.js';
 
 const DISMISS_KEY = 'bb_a2hs_dismissed';
@@ -22,6 +23,15 @@ function isStandalone() {
 export function initPWA() {
   registerServiceWorker();
   setupInstallHint();
+  // Sicherheitsnetz für verpasste Update-Banner (App wurde während der
+  // Installation gekillt o. Ä.): Ist der SW-Cache neuer als das laufende JS,
+  // liegt ein fertiges Update bereit → sofort „Neu laden" anbieten.
+  if (window.caches) {
+    caches.keys().then(keys => {
+      const k = keys.filter(x => x.indexOf('busbegleiter-') === 0).sort().pop();
+      if (k && k !== 'busbegleiter-v' + APP.version) showUpdateBanner();
+    }).catch(() => {});
+  }
 }
 
 function registerServiceWorker() {
@@ -59,7 +69,7 @@ let _updBanner = null;
 function showUpdateBanner() {
   if (_updBanner) return;
   _updBanner = elFromHTML(
-    '<div class="a2hs"><div class="ic">🔄</div><div class="tx"><b>Update geladen.</b> Einmal neu laden, um die neue Version zu nutzen.' +
+    '<div class="a2hs upd"><div class="ic">🔄</div><div class="tx"><b>Update geladen.</b> Einmal neu laden, um die neue Version zu nutzen.' +
     '<div style="margin-top:8px"><button class="btn" id="updReload" style="width:auto;padding:8px 16px">Jetzt neu laden</button></div></div>' +
     '<button class="cl" title="Später">✕</button></div>');
   document.body.appendChild(_updBanner);

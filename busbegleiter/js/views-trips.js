@@ -136,8 +136,13 @@ export function openSettings() {
       }
       toast('Prüfe auf Update …');
       await reg.update();
-      if (reg.installing || reg.waiting) toast('Update wird geladen – gleich erscheint „Neu laden"');
-      else toast('App ist aktuell (v' + APP.version + ')');
+      if (reg.installing || reg.waiting) { toast('Update wird geladen – gleich erscheint „Neu laden"'); return; }
+      // SW aktuell, aber die laufende Seite älter als der Cache (Update schon
+      // installiert, Seite nie neu geladen)? → direkt neu laden.
+      const keys = window.caches ? await caches.keys().catch(() => []) : [];
+      const k = keys.filter(x => x.indexOf('busbegleiter-') === 0).sort().pop();
+      if (k && k !== 'busbegleiter-v' + APP.version) { toast('Update bereit – App lädt neu …'); setTimeout(() => location.reload(), 700); return; }
+      toast('App ist aktuell (v' + APP.version + ')');
     } catch (e) { toast('Update-Prüfung fehlgeschlagen'); }
   };
 }

@@ -11,7 +11,7 @@
    ============================================================================= */
 
 // Bei jedem Release zusammen mit APP.version in js/config.js hochzählen!
-const CACHE_VERSION = 'busbegleiter-v2.6.5';
+const CACHE_VERSION = 'busbegleiter-v2.6.6';
 
 /** Dateien, die beim Installieren vorab gecacht werden (App-Shell). */
 const APP_SHELL = [
