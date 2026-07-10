@@ -15,6 +15,25 @@ import { render, updateTabBadges } from './app.js';
 
 /* ---------- Suche / Filter / Sortierung ---------- */
 
+/** HTML für ein Suchfeld mit Lupe und ✕-Reset (Issue #11). */
+function searchHTML(id, placeholder, value) {
+  return '<div class="search"><span class="ic">🔎</span><input id="' + id + '" placeholder="' + placeholder + '" value="' + esc(value || '') + '" autocomplete="off" enterkeyhint="search"><button class="clr hidden" aria-label="Suche zurücksetzen">✕</button></div>';
+}
+
+/**
+ * Suchfeld verdrahten: Eingabe → apply(wert); Enter schließt die Tastatur
+ * (iOS zeigt dank enterkeyhint eine „Suchen"-Taste); ✕ leert die Suche.
+ */
+function bindSearch(box, apply) {
+  const inp = box.querySelector('input');
+  const clr = box.querySelector('.clr');
+  const upd = () => clr.classList.toggle('hidden', !inp.value);
+  inp.oninput = () => { apply(inp.value); upd(); };
+  inp.onkeydown = e => { if (e.key === 'Enter') inp.blur(); };
+  clr.onclick = () => { inp.value = ''; apply(''); upd(); inp.blur(); };
+  upd();
+}
+
 /** Passt ein Teilnehmer zur Suchanfrage? (Name, Nr., Handy, Bucher) */
 function matchSearch(p, q) {
   if (!q) return true;
@@ -62,7 +81,7 @@ export function viewTeilnehmer() {
   // Hin-/Rückfahrt-Umschalter: die Rückfahrt wird separat abgehakt (Issue #7),
   // beeinflusst den Hinfahrt-Status nicht und landet nirgends im PDF.
   let html = '<div class="seg" id="legSeg" style="margin-bottom:10px"><button data-l="hin"' + (ui().leg !== 'rueck' ? ' class="on"' : '') + '>🚌 Hinfahrt</button><button data-l="rueck"' + (ui().leg === 'rueck' ? ' class="on"' : '') + '>🔁 Rückfahrt</button></div>';
-  html += '<div class="search"><span class="ic">🔎</span><input id="srch" placeholder="Name, Nummer, Handy oder Bucher …" value="' + esc(ui().search) + '" autocomplete="off"></div>';
+  html += searchHTML('srch', 'Name, Nummer, Handy oder Bucher …', ui().search);
   html += '<div class="chips">' + filters.map(f => '<button class="chip' + (ui().filter === f[0] ? ' on' : '') + '" data-f="' + f[0] + '">' + f[1] + ' ' + f[2] + '</button>').join('') + '</div>';
   if (orte.length > 1) {
     html += '<div class="chipslabel">Abfahrtsort</div><div class="chips orte">' + orte.map(o => '<button class="chip' + (ui().filter === 'ort:' + o ? ' on' : '') + '" data-f="ort:' + esc(o) + '">📍 ' + esc(o) + ' ' + ps.filter(p => p.abfahrtsort === o).length + '</button>').join('') + '</div>';
@@ -83,8 +102,7 @@ export function viewTeilnehmer() {
   redraw();
 
   d.querySelectorAll('#legSeg button').forEach(b => b.onclick = () => { ui().leg = b.dataset.l; save(); render(); });
-  const s = d.querySelector('#srch');
-  s.oninput = () => { ui().search = s.value; save(); redraw(); };
+  bindSearch(d.querySelector('.search'), v => { ui().search = v; save(); redraw(); });
   d.querySelectorAll('.chip').forEach(c => c.onclick = () => { ui().filter = c.dataset.f; render(); });
   d.querySelector('#sortToggle').onclick = () => { ui().sortBy = ui().sortBy === 'name' ? 'nr' : 'name'; render(); };
   d.querySelector('#addP').onclick = openAddParticipant;
@@ -300,7 +318,7 @@ export function viewSitz() {
   const done = ps.filter(p => p.sitzplatz).length;
   const pct = ps.length ? Math.round(done / ps.length * 100) : 0;
   const q = ui().seatSearch || '';
-  d.innerHTML = '<div class="note ok" style="display:flex;justify-content:space-between"><span>💺 Sitzplätze für die Versicherung</span><span class="bold" id="seatDone">' + done + '/' + ps.length + '</span></div><div class="progress"><div style="width:' + pct + '%"></div></div><div class="note" id="dupeWarn" style="display:none"></div><div class="search"><span class="ic">🔎</span><input id="seatSrch" placeholder="Person suchen …" value="' + esc(q) + '" autocomplete="off"></div><p class="tiny muted" style="margin:0 0 8px">Offene zuerst. Nummer eintippen – doppelte Plätze werden rot markiert.</p><div class="plist" id="seatList"></div>';
+  d.innerHTML = '<div class="note ok" style="display:flex;justify-content:space-between"><span>💺 Sitzplätze für die Versicherung</span><span class="bold" id="seatDone">' + done + '/' + ps.length + '</span></div><div class="progress"><div style="width:' + pct + '%"></div></div><div class="note" id="dupeWarn" style="display:none"></div>' + searchHTML('seatSrch', 'Person suchen …', q) + '<p class="tiny muted" style="margin:0 0 8px">Offene zuerst. Nummer eintippen – doppelte Plätze werden rot markiert.</p><div class="plist" id="seatList"></div>';
 
   let rows = [];
   const counts = () => { const m = {}; ps.forEach(p => { const v = (p.sitzplatz || '').trim(); if (v) m[v] = (m[v] || 0) + 1; }); return m; };
@@ -328,8 +346,7 @@ export function viewSitz() {
     refreshDupes();
   };
   draw();
-  const s = d.querySelector('#seatSrch');
-  s.oninput = () => { ui().seatSearch = s.value; save(); draw(); };
+  bindSearch(d.querySelector('.search'), v => { ui().seatSearch = v; save(); draw(); });
   return d;
 }
 

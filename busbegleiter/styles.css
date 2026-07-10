@@ -30,12 +30,14 @@
 /* ---------- 2. Reset & Basis ---------- */
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body{
-  margin:0; padding:0; background:var(--bg); color:var(--text);
+  margin:0; padding:0; height:100%; background:var(--bg); color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   font-size:16px; line-height:1.45; -webkit-text-size-adjust:100%;
 }
-body{ padding-bottom:calc(64px + var(--safe-b)); } /* Platz für die Tab-Leiste */
-body.notrip{ padding-bottom:var(--safe-b); }       /* ohne Fahrt: keine Tab-Leiste */
+/* App-Shell: Die Seite selbst scrollt NIE – nur #main (.wrap). Kopf- und
+   Tab-Leiste bleiben dadurch immer am Bildschirmrand, auch bei kurzem Inhalt
+   oder offener Tastatur (Issue #13). */
+body{ display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:none; }
 button{ cursor:pointer; border:none; background:none; font:inherit; color:inherit; touch-action:manipulation; }
 a.pact{ touch-action:manipulation; }
 .hidden{ display:none!important; }
@@ -51,7 +53,7 @@ input:where(:not([type=checkbox]):not([type=radio])):focus,select:focus,textarea
 
 /* ---------- 4. App-Leiste (Kopf) ---------- */
 .app-bar{
-  position:sticky; top:0; z-index:30; background:var(--accent); color:#fff;
+  flex:0 0 auto; position:relative; z-index:30; background:var(--accent); color:#fff;
   padding:calc(10px + var(--safe-t)) 14px 10px; box-shadow:var(--shadow);
 }
 .tripbtn{ color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; gap:7px; max-width:80%; }
@@ -60,7 +62,12 @@ input:where(:not([type=checkbox]):not([type=radio])):focus,select:focus,textarea
 .app-bar .gear{ position:absolute; right:2px; top:calc(4px + var(--safe-t)); color:#fff; font-size:20px; padding:12px 16px; }
 
 /* ---------- 5. Layout & Utilities ---------- */
-.wrap{ max-width:760px; margin:0 auto; padding:12px; }
+/* Der einzige Scroll-Container der App (siehe App-Shell oben). */
+.wrap{
+  flex:1; min-height:0; width:100%; max-width:760px; margin:0 auto;
+  padding:12px 12px 24px; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
 .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); }
 .row{ display:flex; align-items:center; gap:10px; }
 .muted{ color:var(--muted); } .small{ font-size:13px; } .tiny{ font-size:11.5px; } .bold{ font-weight:600; }
@@ -72,8 +79,10 @@ hr.sep{ border:none; border-top:1px solid var(--line); margin:14px 0; }
 
 /* Suche + Filter-Chips */
 .search{ position:relative; margin-bottom:10px; }
-.search input{ padding-left:38px; border-radius:12px; }
+.search input{ padding-left:38px; padding-right:42px; border-radius:12px; }
 .search .ic{ position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); }
+/* ✕-Reset: erscheint nur bei Eingabe (Issue #11). */
+.search .clr{ position:absolute; right:2px; top:50%; transform:translateY(-50%); padding:10px 13px; color:var(--muted); font-size:15px; }
 .chips{ display:flex; flex-wrap:wrap; gap:7px; padding:2px 0 6px; }
 .chip{ white-space:nowrap; padding:9px 13px; border-radius:999px; background:var(--chip); color:var(--text); font-size:13.5px; border:1px solid transparent; }
 .chip.on{ background:var(--accent); color:#fff; }
@@ -113,7 +122,7 @@ hr.sep{ border:none; border-top:1px solid var(--line); margin:14px 0; }
 .checkbtn.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
 
 /* ---------- 7. Tab-Leiste (unten) ---------- */
-.tabbar{ position:fixed; bottom:0; left:0; right:0; z-index:40; display:flex; background:var(--card); border-top:1px solid var(--line); padding-bottom:var(--safe-b); }
+.tabbar{ flex:0 0 auto; z-index:40; display:flex; background:var(--card); border-top:1px solid var(--line); padding-bottom:var(--safe-b); }
 .tabbar button{ flex:1; padding:8px 2px 6px; display:flex; flex-direction:column; align-items:center; gap:2px; color:var(--muted); font-size:11px; position:relative; }
 .tabbar button.on{ color:var(--accent); } .tabbar .ti{ font-size:21px; line-height:1; }
 .tabbar .badge{ position:absolute; top:4px; left:50%; margin-left:6px; background:var(--danger); color:#fff; font-size:10px; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 4px; }

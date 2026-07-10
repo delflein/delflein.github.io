@@ -56,13 +56,15 @@ export function updateTabBadges() {
   add('sitz', seats);
 }
 
-/** Tab wechseln – Scroll-Position pro Tab merken/wiederherstellen. */
+/** Tab wechseln – Scroll-Position pro Tab merken/wiederherstellen.
+    Gescrollt wird nur #main (App-Shell, Issue #13), nicht das Fenster. */
 let tabScroll = {};
 export function setTab(tab) {
-  if (state && state.ui) tabScroll[ui().tab] = window.scrollY;
+  const m = $('#main');
+  if (state && state.ui) tabScroll[ui().tab] = m.scrollTop;
   ui().tab = tab;
   render();
-  requestAnimationFrame(() => window.scrollTo(0, tabScroll[tab] || 0));
+  requestAnimationFrame(() => { m.scrollTop = tabScroll[tab] || 0; });
 }
 
 /** Einmalige Verdrahtung der festen UI-Elemente (Kopf, Tabs, Datei-Import). */

@@ -73,21 +73,19 @@ export function viewImport() {
   return d;
 }
 
-/** Einstellungen (eigene Seite): Name, Kontodaten (Auslagen), WhatsApp-Vorlage. */
+/** Einstellungen (eigene Seite): Name, Kontodaten (Auslagen). */
 export function openSettings() {
   const k = state.settings.konto;
   const n = elFromHTML('<div></div>');
   n.innerHTML = '<div class="field"><label>Dein Name (Busbegleiter)</label><input id="sBetreuer" value="' + esc(state.settings.betreuer) + '"></div>' +
     '<div class="sectitle">Kontodaten für Auslagenerstattung</div><p class="tiny muted" style="margin:-4px 0 8px">Einmal hinterlegen – gilt für alle Fahrten.</p>' +
     '<div class="field"><label>Kontoinhaber</label><input id="kInh" value="' + esc(k.inhaber) + '"></div><div class="field"><label>IBAN</label><input id="kIban" value="' + esc(k.iban) + '"></div><div class="field"><label>Bank</label><input id="kBank" value="' + esc(k.bank) + '"></div>' +
-    '<div class="sectitle">WhatsApp-Nachricht</div><div class="field"><label>Vorlage „an alle" ({invite} = Gruppenlink der Fahrt)</label><textarea id="sTpl">' + esc(state.settings.waTemplate) + '</textarea></div>' +
     '<hr class="sep">' + (T() ? '<button class="btn sec" id="reimport">📄 Liste in „' + esc(T().name) + '" importieren</button>' : '') + '<p class="tiny muted" style="text-align:center;margin-top:14px">Alle Daten liegen nur lokal auf diesem Gerät (IndexedDB).</p>';
   const pg = openPage('⚙️ Einstellungen', n);
   n.querySelector('#sBetreuer').oninput = e => { state.settings.betreuer = e.target.value; save(); };
   n.querySelector('#kInh').oninput = e => { k.inhaber = e.target.value; save(); };
   n.querySelector('#kIban').oninput = e => { k.iban = e.target.value; save(); };
   n.querySelector('#kBank').oninput = e => { k.bank = e.target.value; save(); };
-  n.querySelector('#sTpl').oninput = e => { state.settings.waTemplate = e.target.value; save(); };
   const ri = n.querySelector('#reimport');
   if (ri) ri.onclick = () => { pg._close(); $('#pdfInput').click(); };
 }

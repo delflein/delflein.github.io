@@ -18,7 +18,7 @@ Live: `https://delflein.github.io/busbegleiter/`
   dem Handy.
 - **Sitzplätze erfassen** (versicherungsrelevant) inkl. Warnung bei
   doppelt vergebenen Plätzen.
-- **Anrufen / WhatsApp** ohne Kontakt speichern; Gruppenlink an alle teilen.
+- **Anrufen / WhatsApp** ohne Kontakt speichern.
 - **Formulare ausfüllen** – Auslagen, Einnahmen, No-Shows, Bus-Checkliste,
   Namensänderungen.
 - **Export**: erzeugt **3 PDFs**, in die **Original-Formulare gestempelt**
