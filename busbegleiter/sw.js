@@ -11,7 +11,7 @@
    ============================================================================= */
 
 // Bei jedem Release zusammen mit APP.version in js/config.js hochzählen!
-const CACHE_VERSION = 'busbegleiter-v2.6.6';
+const CACHE_VERSION = 'busbegleiter-v2.6.7';
 
 /** Dateien, die beim Installieren vorab gecacht werden (App-Shell). */
 const APP_SHELL = [
@@ -34,9 +34,17 @@ const APP_SHELL = [
 ];
 
 // Installieren: App-Shell cachen und sofort aktiv werden.
+// cache:'reload' erzwingt frische Kopien vom Server – ohne das landen Dateien
+// aus dem HTTP-Cache (GitHub Pages: 10 min) im neuen Versions-Cache und die
+// „neue" Version enthält in Wahrheit die alten Dateien.
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_VERSION).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE_VERSION).then(cache => Promise.all(
+      APP_SHELL.map(url => fetch(url, { cache: 'reload' }).then(res => {
+        if (!res.ok) throw new Error(url + ' → HTTP ' + res.status);
+        return cache.put(url, res);
+      }))
+    )).then(() => self.skipWaiting())
   );
 });
 
