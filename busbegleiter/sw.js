@@ -10,7 +10,7 @@
    Cache verworfen und die neuen Dateien werden geholt.
    ============================================================================= */
 
-const CACHE_VERSION = 'busbegleiter-v2.6.0';
+const CACHE_VERSION = 'busbegleiter-v2.6.1';
 
 /** Dateien, die beim Installieren vorab gecacht werden (App-Shell). */
 const APP_SHELL = [

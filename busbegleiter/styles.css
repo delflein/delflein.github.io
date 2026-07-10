@@ -36,8 +36,10 @@ html,body{
 }
 /* App-Shell: Die Seite selbst scrollt NIE – nur #main (.wrap). Kopf- und
    Tab-Leiste bleiben dadurch immer am Bildschirmrand, auch bei kurzem Inhalt
-   oder offener Tastatur (Issue #13). */
-body{ display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:none; }
+   oder offener Tastatur (Issue #13).
+   100dvh statt 100%: iOS rechnet bei 100% den unteren Rand (Safari-Toolbar /
+   Home-Indikator) nicht mit – die Tab-Leiste hinge sonst über dem Bildschirmrand. */
+body{ display:flex; flex-direction:column; overflow:hidden; overscroll-behavior:none; height:100dvh; }
 button{ cursor:pointer; border:none; background:none; font:inherit; color:inherit; touch-action:manipulation; }
 a.pact{ touch-action:manipulation; }
 .hidden{ display:none!important; }
