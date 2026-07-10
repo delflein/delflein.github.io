@@ -5,10 +5,11 @@
    Pfade zu Assets und die festen Text-Zeilen der Bus-Checkliste.
    ============================================================================= */
 
-/** App-Metadaten. `version` wird auch für den Service-Worker-Cache genutzt. */
+/** App-Metadaten. `version` wird in den Einstellungen angezeigt –
+ *  bei jedem Release zusammen mit CACHE_VERSION in sw.js hochzählen! */
 export const APP = {
   name: 'Busbegleiter',
-  version: '2.0.0',
+  version: '2.6.2',
   /** Original-Feierreisen-Formulare (Auslagen · Einnahmen · Checkliste · Namensänderung).
    *  Wird beim Export mit pdf-lib bestempelt. Liegt lokal im Repo → offline verfügbar. */
   formTemplateUrl: './assets/vorlage-formulare.pdf',

@@ -2,6 +2,7 @@
    views-trips.js – Fahrten-Übersicht, „Neue Fahrt", Import-Start, Einstellungen
    ============================================================================= */
 
+import { APP } from './config.js';
 import { $, elFromHTML, toast } from './dom.js';
 import { esc, fmtDate } from './util.js';
 import { state, T, ui, save, newTrip } from './state.js';
@@ -80,7 +81,8 @@ export function openSettings() {
   n.innerHTML = '<div class="field"><label>Dein Name (Busbegleiter)</label><input id="sBetreuer" value="' + esc(state.settings.betreuer) + '"></div>' +
     '<div class="sectitle">Kontodaten für Auslagenerstattung</div><p class="tiny muted" style="margin:-4px 0 8px">Einmal hinterlegen – gilt für alle Fahrten.</p>' +
     '<div class="field"><label>Kontoinhaber</label><input id="kInh" value="' + esc(k.inhaber) + '"></div><div class="field"><label>IBAN</label><input id="kIban" value="' + esc(k.iban) + '"></div><div class="field"><label>Bank</label><input id="kBank" value="' + esc(k.bank) + '"></div>' +
-    '<hr class="sep">' + (T() ? '<button class="btn sec" id="reimport">📄 Liste in „' + esc(T().name) + '" importieren</button>' : '') + '<p class="tiny muted" style="text-align:center;margin-top:14px">Alle Daten liegen nur lokal auf diesem Gerät (IndexedDB).</p>';
+    '<hr class="sep">' + (T() ? '<button class="btn sec" id="reimport">📄 Liste in „' + esc(T().name) + '" importieren</button>' : '') + '<p class="tiny muted" style="text-align:center;margin-top:14px">Alle Daten liegen nur lokal auf diesem Gerät (IndexedDB).</p>' +
+    '<p class="tiny muted" id="verLine" style="text-align:center;margin-top:4px">App v' + APP.version + '</p>';
   const pg = openPage('⚙️ Einstellungen', n);
   n.querySelector('#sBetreuer').oninput = e => { state.settings.betreuer = e.target.value; save(); };
   n.querySelector('#kInh').oninput = e => { k.inhaber = e.target.value; save(); };
@@ -88,4 +90,12 @@ export function openSettings() {
   n.querySelector('#kBank').oninput = e => { k.bank = e.target.value; save(); };
   const ri = n.querySelector('#reimport');
   if (ri) ri.onclick = () => { pg._close(); $('#pdfInput').click(); };
+  // Sanity-Check: laufende JS-Version + aktiver SW-Cache. Weichen sie ab,
+  // ist ein Update installiert, aber die Seite noch nicht neu geladen.
+  if (window.caches) {
+    caches.keys().then(keys => {
+      const k = keys.filter(x => x.indexOf('busbegleiter-') === 0).sort().pop();
+      if (k) n.querySelector('#verLine').textContent = 'App v' + APP.version + ' · Cache ' + k.replace('busbegleiter-', '');
+    }).catch(() => {});
+  }
 }
