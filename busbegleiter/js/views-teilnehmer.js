@@ -201,12 +201,69 @@ export function openDetail(p) {
   const sug = suggestNr(p);
   const n = elFromHTML('<div></div>');
   n.innerHTML = '<div class="card" style="padding:4px 14px;margin-bottom:14px"><div class="kv"><span class="k">Abfahrtsort</span><span>' + esc(p.abfahrtsort || '—') + '</span></div><div class="kv"><span class="k">Ticket</span><span>' + esc(p.ticket || '—') + '</span></div><div class="kv"><span class="k">Camping</span><span>' + (p.camp ? 'Ja 🏕' : 'Nein') + '</span></div><div class="kv"><span class="k">Sondergepäck</span><span>' + esc(p.sondergepaeck || '—') + '</span></div><div class="kv"><span class="k">Bucher</span><span>' + esc(p.bucher || '—') + (p.istBucher ? ' (selbst)' : '') + '</span></div><div class="kv"><span class="k">Zahlung (ganze Buchung)</span><span><button class="linkbtn" id="togPay">' + (p.bezahlt ? '✓ Bezahlt' : '⚠️ Offen – tippen') + '</button></span></div></div>' +
+    '<button class="btn out" id="editP" style="margin-bottom:14px">✏️ Daten bearbeiten</button>' +
     '<div class="field"><label>Teilnehmer-Nr. (aus Liste)</label><input id="nrInp" inputmode="numeric" value="' + esc(String(p.nr)) + '"></div>' +
     '<div class="field"><label>Handynummer</label><input id="handyInp" inputmode="tel" placeholder="z. B. 0176…" value="' + esc(p.handy || '') + '"></div>' +
     (sug ? ('<div class="note" id="nrSug">⚠️ Nr. <b>' + p.nr + '</b> kommt doppelt vor – laut Reihenfolge sollte das <b>Nr. ' + sug + '</b> sein. <button class="linkbtn" id="nrFix" style="margin-left:2px;font-weight:600">→ auf ' + sug + ' setzen</button></div>') : '') +
     (!p.bezahlt && b && b.handy ? ('<a class="btn out" href="' + telHref(b.handy) + '" style="margin-bottom:14px">💶 Bucher ' + esc(p.bucher) + ' anrufen (Geld)</a>') : '') +
     '<div class="row" id="callRow" style="gap:8px;margin-bottom:14px"></div><div class="field"><label>Sitzplatz-Nr.</label><input id="seatInp" inputmode="numeric" placeholder="z. B. 14" value="' + esc(p.sitzplatz) + '"></div><div class="field"><label>Kommentar</label><textarea id="cmtInp" placeholder="Notiz …">' + esc(p.kommentar || '') + '</textarea></div><div class="sectitle">✍︎ Unterschrift / Check-in</div><div id="sigThumb"></div><button class="btn out" id="sigBtn" style="margin-top:6px">✍︎ Unterschrift erfassen</button><button class="btn" id="checkInBtn" style="margin-top:10px"></button><button class="btn sec" id="rueckBtn" style="margin-top:8px"></button><div class="sectitle">Status</div><div class="seg" id="statusSeg"><button data-s="">Aktiv</button><button data-s="abgemeldet">Abgemeldet</button><button data-s="nicht_angetreten">Nicht angetr.</button></div><button class="btn out" id="nameChg" style="margin-top:18px">↔︎ Namensänderung (neuer Gast)</button><button class="btn sec" id="rmP" style="margin-top:8px;color:var(--danger)">🗑 Teilnehmer entfernen</button>';
   const pg = openPage(esc(p.name) + ' · Nr ' + p.nr, n);
+
+  // Stammdaten bearbeiten (Tippfehler & Co.) – bewusst getrennt von der
+  // „Namensänderung": die ist ein Gäste-Tausch mit 5-€-Formular, hier wird
+  // nur der bestehende Eintrag korrigiert.
+  n.querySelector('#editP').onclick = () => {
+    const s = elFromHTML('<div></div>');
+    const segVal = { camp: !!p.camp };
+    s.innerHTML = '<h2>Daten bearbeiten</h2>' +
+      '<div class="field"><label>Name *</label><input id="edName" value="' + esc(p.name) + '"></div>' +
+      '<div class="field"><label>Abfahrtsort</label><input id="edOrt" value="' + esc(p.abfahrtsort || '') + '"></div>' +
+      '<div class="field"><label>Ticket</label><input id="edTicket" value="' + esc(p.ticket || '') + '"></div>' +
+      '<div class="field"><label>Sondergepäck</label><input id="edGep" value="' + esc(p.sondergepaeck || '') + '"></div>' +
+      '<div class="field" style="margin-bottom:10px"><label>Camping</label><div class="seg" id="edCampSeg"><button type="button" data-v="0"' + (p.camp ? '' : ' class="on"') + '>Nein</button><button type="button" data-v="1"' + (p.camp ? ' class="on"' : '') + '>Ja</button></div></div>' +
+      '<p class="tiny muted" style="margin:0 2px 14px">Nur Korrekturen – für einen echten Gäste-Tausch bitte „Namensänderung" nutzen.</p>' +
+      '<button class="btn" id="edSave">Speichern</button>';
+    const bg = openSheet(s);
+    const cseg = s.querySelector('#edCampSeg');
+    cseg.addEventListener('click', ev => {
+      const bx = ev.target.closest('button');
+      if (!bx || !cseg.contains(bx)) return;
+      ev.preventDefault();
+      segVal.camp = bx.dataset.v === '1';
+      cseg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === bx));
+    });
+    s.querySelector('#edSave').onclick = () => {
+      const name = s.querySelector('#edName').value.trim();
+      if (!name) { toast('Bitte Name eingeben'); return; }
+      const oldName = p.name;
+      p.name = name;
+      p.abfahrtsort = s.querySelector('#edOrt').value.trim();
+      p.ticket = s.querySelector('#edTicket').value.trim();
+      p.sondergepaeck = s.querySelector('#edGep').value.trim();
+      p.camp = segVal.camp;
+      // Ist der Teilnehmer selbst der Bucher, zieht der Buchungs- und damit
+      // der Bucher-Name aller Mitfahrer mit.
+      const bk = bookingOf(p);
+      if (bk && p.istBucher && bk.bucher === oldName) {
+        bk.bucher = name;
+        T().participants.forEach(x => { if (x.buchungId === bk.id) x.bucher = name; });
+      }
+      // Offene Detailseite in place aktualisieren (schließen + neu öffnen
+      // kollidiert mit dem History-Handling der Overlays, s. overlay.js).
+      const setKv = (label, val) => n.querySelectorAll('.kv').forEach(kv => {
+        const k = kv.querySelector('.k');
+        if (k && k.textContent === label) kv.lastElementChild.textContent = val;
+      });
+      setKv('Abfahrtsort', p.abfahrtsort || '—');
+      setKv('Ticket', p.ticket || '—');
+      setKv('Camping', p.camp ? 'Ja 🏕' : 'Nein');
+      setKv('Sondergepäck', p.sondergepaeck || '—');
+      setKv('Bucher', (p.bucher || '—') + (p.istBucher ? ' (selbst)' : ''));
+      const tt = pg.querySelector('.ptitle');
+      if (tt) tt.textContent = p.name + ' · Nr ' + p.nr;
+      save(); bg._close(); render(); toast('Gespeichert');
+    };
+  };
 
   // Nummer ändern (manuell oder per Vorschlag).
   const applyNr = v => {

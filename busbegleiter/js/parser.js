@@ -155,7 +155,12 @@ export function parseTeilnehmer(pages) {
       if (/Skat|Geburtstag/i.test(joined) && c.name === '') continue; // Rest-Fragmente der Kopfzeile
 
       const isNum = /^\d{1,3}$/.test(c.nr);
-      const isPaid = /bezahlt/i.test(joined);                          // Zahlung zeilenweit prüfen
+      // Zahlung zeilenweit prüfen. Zwei Formate:
+      //   • altes Layout: das Wort „Bezahlt" steht in der Bucher-Zeile
+      //   • neues Layout: die „Offen"-Spalte zeigt einen Betrag – „0,00 €" heißt bezahlt
+      const money = joined.match(/(\d[\d.]*,\d{2})\s*€/);
+      const moneyVal = money ? parseFloat(money[1].replace(/\./g, '').replace(',', '.')) : null;
+      const isPaid = /bezahlt/i.test(joined) || moneyVal === 0;
       const handy = (c.handy || '').replace(/[^\d+]/g, '').replace(/(?!^)\+/g, ''); // nur Ziffern + führendes +
       const handyIsPhone = /\d{5,}/.test(handy);
 
@@ -175,7 +180,10 @@ export function parseTeilnehmer(pages) {
         });
       } else {
         // ---- evtl. Bucher-Zeile (dunkel, ohne Nummer) ----
-        const signal = handyIsPhone || isPaid; // echtes Signal für eine neue Buchung
+        // Echtes Signal für eine neue Buchung: Handynummer, „Bezahlt" ODER ein
+        // €-Betrag (neues Layout: jede Bucher-Zeile trägt den Offen-Betrag,
+        // auch ohne Handy – sonst rutschen Einzelbucher in die Vor-Buchung).
+        const signal = handyIsPhone || isPaid || money != null;
         if (signal) {
           const name = cleanName((pending ? pending + ' ' : '') + c.name);
           pending = '';
