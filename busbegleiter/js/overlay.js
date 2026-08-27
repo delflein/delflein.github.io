@@ -16,6 +16,7 @@
 
 import { elFromHTML } from './dom.js';
 import { render } from './app.js';
+import { watchScroll, updateToTop } from './scrolltop.js';
 
 /** Stapel offener Overlays (unterstes zuerst). */
 let _ovStack = [];
@@ -127,5 +128,7 @@ export function openPage(title, innerNode) {
   _openOverlay(pg, render);
   pg.querySelector('.pback').onclick = () => pg._close();
   pg.scrollTop = 0;
+  watchScroll(pg);   // „Nach oben"-Pfeil auch auf langen Detailseiten
+  updateToTop();     // frisch geöffnete Seite steht oben → Pfeil ggf. verstecken
   return pg;
 }

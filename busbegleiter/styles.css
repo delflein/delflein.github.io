@@ -229,3 +229,18 @@ hr.sep{ border:none; border-top:1px solid var(--line); margin:14px 0; }
 .a2hs .tx b{ color:var(--accent-d); }
 .a2hs .cl{ flex:0 0 auto; color:var(--muted); font-size:20px; padding:10px 12px; margin:-10px -8px; align-self:center; }
 @keyframes a2hs-in{ from{ transform:translateY(12px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+
+/* ---------- „Nach oben"-Pfeil (scrolltop.js) ---------- */
+/* Schwebt über #main UND über .page-Detailseiten (z-index 61 > 60). Solange
+   ein Sheet offen ist, verschwindet er, damit er nicht über dem abgedunkelten
+   Hintergrund hängt und versehentlich die Liste dahinter scrollt. */
+#toTop{
+  position:fixed; right:14px; bottom:calc(78px + var(--safe-b)); z-index:61;
+  width:46px; height:46px; border-radius:50%; border:none;
+  background:var(--accent); color:#fff; font-size:22px; line-height:1;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);
+  opacity:0; pointer-events:none; transform:translateY(10px);
+  transition:opacity .2s, transform .2s;
+}
+#toTop.show{ opacity:1; pointer-events:auto; transform:none; }
+body:has(.sheet-bg) #toTop, body:has(.sigscreen) #toTop{ opacity:0; pointer-events:none; }

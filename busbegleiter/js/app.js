@@ -13,6 +13,7 @@ import { viewTeilnehmer, viewSitz } from './views-teilnehmer.js';
 import { viewFormulare, viewBericht, viewAbschluss } from './views-formulare.js';
 import { doImport } from './pdf.js';
 import { initPWA } from './pwa.js';
+import { initToTop, updateToTop } from './scrolltop.js';
 
 /** Baut die aktuelle Ansicht komplett neu in #main. */
 export function render() {
@@ -30,6 +31,7 @@ export function render() {
     $('#hdrSub').textContent = state.trips.length ? 'Fahrt auswählen' : 'Noch keine Fahrt angelegt';
   }
   updateTabBadges();
+  updateToTop(); // z. B. nach dem Schließen einer Detailseite neu bewerten
 
   const m = $('#main');
   m.innerHTML = '';
@@ -85,6 +87,7 @@ function bindUI() {
 (async function boot() {
   await loadState();
   bindUI();
+  initToTop();
   render();
   initPWA(); // Service Worker registrieren + „Zum Home-Bildschirm"-Hinweis
 })();

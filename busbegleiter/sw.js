@@ -11,7 +11,7 @@
    ============================================================================= */
 
 // Bei jedem Release zusammen mit APP.version in js/config.js hochzählen!
-const CACHE_VERSION = 'busbegleiter-v2.6.9';
+const CACHE_VERSION = 'busbegleiter-v2.7.0';
 
 /** Dateien, die beim Installieren vorab gecacht werden (App-Shell). */
 const APP_SHELL = [
@@ -21,7 +21,7 @@ const APP_SHELL = [
   './manifest.webmanifest',
   // JS-Module
   './js/app.js', './js/config.js', './js/dom.js', './js/overlay.js', './js/parser.js',
-  './js/pdf.js', './js/pwa.js', './js/signature.js', './js/state.js', './js/util.js',
+  './js/pdf.js', './js/pwa.js', './js/scrolltop.js', './js/signature.js', './js/state.js', './js/util.js',
   './js/views-formulare.js', './js/views-teilnehmer.js', './js/views-trips.js',
   // Bibliotheken (lokal gebündelt)
   './assets/vendor/pdf.min.js', './assets/vendor/pdf.worker.min.js',
