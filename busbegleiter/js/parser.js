@@ -26,10 +26,11 @@
 const DEFAULT_BOUNDS = { nr:14, name:48, sitzplatz:145, handy:271, abfahrtsort:368, ticket:429, skat:476, sondergepaeck:542, camp:668, offen:707, kommentar:755, end:822 };
 
 /** Reihenfolge der logischen Spalten (links → rechts). */
-const COLS = ['nr','name','sitzplatz','handy','abfahrtsort','ticket','skat','sondergepaeck','camp','offen','kommentar'];
+const COLS = ['nr','bus','name','sitzplatz','handy','abfahrtsort','ticket','skat','sondergepaeck','camp','offen','kommentar'];
 
 /** Kanonische Spalte → mögliche Kopf-Beschriftungen (Varianten werden toleriert). */
 const LABELMAP = [
+  ['bus',          /^Bus$/i],                          // neues Layout: Bus-Spalte zwischen Nr und Name (Bucher-Zeilen: Buchungsnummer)
   ['name',         /^Name$/i],
   ['sitzplatz',    /Unterschrift|Sitzplatz/i],
   ['handy',        /^Handy$/i],
@@ -161,7 +162,9 @@ export function parseTeilnehmer(pages) {
       const money = joined.match(/(\d[\d.]*,\d{2})\s*€/);
       const moneyVal = money ? parseFloat(money[1].replace(/\./g, '').replace(',', '.')) : null;
       const isPaid = /bezahlt/i.test(joined) || moneyVal === 0;
-      const handy = (c.handy || '').replace(/[^\d+]/g, '').replace(/(?!^)\+/g, ''); // nur Ziffern + führendes +
+      // Excel-Exportfehler wie „4,91526E+12“: Nummer ist abgeschnitten/unbrauchbar → leer lassen
+      const rawHandy = /\d[,.]\d+E\+?\d+/i.test(c.handy || '') ? '' : (c.handy || '');
+      const handy = rawHandy.replace(/[^\d+]/g, '').replace(/(?!^)\+/g, ''); // nur Ziffern + führendes +
       const handyIsPhone = /\d{5,}/.test(handy);
 
       if (isNum) {
